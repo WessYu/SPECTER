@@ -1,5 +1,5 @@
 declare module "fastify" {
-  export interface FastifyRequest<T = unknown> { readonly params: T extends { Params: infer P } ? P : Record<string, string>; readonly body: T extends { Body: infer B } ? B : unknown; readonly headers: Record<string, string | string[] | undefined>; readonly id: string; }
+  export interface FastifyRequest<T = unknown> { readonly params: T extends { Params: infer P } ? P : Record<string, string>; readonly body: T extends { Body: infer B } ? B : unknown; readonly headers: Record<string, string | string[] | undefined>; readonly id: string; readonly url: string; }
   export interface FastifyReply { code(statusCode: number): FastifyReply; send(payload?: unknown): unknown; header(name: string, value: string): FastifyReply; }
   export interface FastifyInstance {
     register(plugin: unknown, options?: unknown): Promise<void>;

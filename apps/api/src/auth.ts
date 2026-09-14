@@ -14,7 +14,6 @@ export function getAuth(request: FastifyRequest): AuthContext {
 
 export function createAuthHook(prisma: PrismaClient) {
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
-    if (request.headers["x-specter-healthcheck"] === "1") return;
     const raw = request.headers.authorization;
     const header = Array.isArray(raw) ? raw[0] : raw;
     const token = header?.startsWith("Bearer ") ? header.slice(7).trim() : undefined;

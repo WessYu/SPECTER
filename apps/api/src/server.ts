@@ -16,8 +16,7 @@ export function createServer(prisma = new PrismaClient()): FastifyInstance {
   void app.register(rateLimit, { max: 120, timeWindow: "1 minute", keyGenerator: (request: { headers: Record<string, unknown> }) => String(request.headers["x-forwarded-for"] ?? "unknown") });
   const authHook = createAuthHook(prisma);
   app.addHook("onRequest", async (request, reply) => {
-    if (request.headers["x-specter-healthcheck"] === "1") return;
-    if ((request as unknown as { url?: string }).url === "/health") return;
+    if (request.url === "/health") return;
     await authHook(request, reply);
   });
   registerRoutes(app, prisma);
