@@ -119,9 +119,10 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   modules.push(moduleResult("remote", mark, remote.findings.length));
 
   mark = Date.now();
+  let discoveredSurface: Awaited<ReturnType<typeof discoverSurface>> | undefined;
   try {
-    const surface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: defaultConfig.limits.maxPages, includeRuntime: options.runtime ?? false });
-    modules.push({ name: `surface:${surface.routes.length} routes/${surface.externalDomains.length} domains`, durationMs: elapsed(mark), findingCount: 0, status: "passed" });
+    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: defaultConfig.limits.maxPages, includeRuntime: options.runtime ?? false });
+    modules.push({ name: `surface:${discoveredSurface.routes.length} routes/${discoveredSurface.externalDomains.length} domains`, durationMs: elapsed(mark), findingCount: 0, status: "passed" });
   } catch (error: unknown) {
     modules.push({ name: "surface", durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
     errors.push({ code: "SURFACE_DISCOVERY_PARTIAL", message: error instanceof Error ? error.message : "Surface discovery failed", module: "surface", recoverable: true });
@@ -144,6 +145,7 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
     findings: unique,
     modules,
     errors,
+    ...(discoveredSurface ? { surface: { routes: discoveredSurface.routes, externalDomains: discoveredSurface.externalDomains, removedDomains: discoveredSurface.removedDomains } } : {}),
   };
 }
 

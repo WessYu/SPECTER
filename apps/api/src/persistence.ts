@@ -16,9 +16,44 @@ export async function persistScan(prisma: PrismaClient, organizationId: string, 
     await tx.scan.create({ data: {
       id: result.scanId, projectId, targetKind: result.target.kind, targetValue: result.target.value, status: result.status,
       score: result.score.value, schemaVersion: result.schemaVersion, summaryJson: result.summary, modulesJson: result.modules,
-      errorsJson: result.errors, startedAt: new Date(result.startedAt), completedAt: new Date(result.completedAt), durationMs: Math.round(result.durationMs),
+      errorsJson: result.errors, ...(result.surface ? { surfaceJson: result.surface } : {}), startedAt: new Date(result.startedAt), completedAt: new Date(result.completedAt), durationMs: Math.round(result.durationMs),
     } });
     for (const finding of result.findings) await persistFinding(tx, projectId, result, finding);
+    if (result.surface) {
+      for (const domain of result.surface.externalDomains) {
+        await tx.externalDomain.upsert({
+          where: { projectId_domain: { projectId, domain: domain.domain } },
+          create: {
+            projectId, scanId: result.scanId, domain: domain.domain, classification: domain.classification,
+            resourceTypes: [...domain.resourceTypes], firstSeenAt: new Date(result.completedAt), lastSeenAt: new Date(result.completedAt),
+          },
+          update: {
+            scanId: result.scanId, classification: domain.classification, resourceTypes: [...domain.resourceTypes], lastSeenAt: new Date(result.completedAt),
+          },
+        });
+      }
+      for (const route of result.surface.routes) {
+        await tx.route.upsert({
+          where: { projectId_method_url: { projectId, method: route.method, url: route.url } },
+          create: {
+            projectId, scanId: result.scanId, method: route.method, url: route.url,
+            ...(route.status !== undefined ? { status: route.status } : {}),
+            ...(route.contentType ? { contentType: route.contentType } : {}),
+            ...(route.cors ? { cors: route.cors } : {}),
+            ...(route.authenticationObservable !== undefined ? { authObservable: route.authenticationObservable } : {}),
+            firstSeenAt: new Date(result.completedAt), lastSeenAt: new Date(result.completedAt),
+          },
+          update: {
+            scanId: result.scanId,
+            ...(route.status !== undefined ? { status: route.status } : {}),
+            ...(route.contentType ? { contentType: route.contentType } : {}),
+            ...(route.cors ? { cors: route.cors } : {}),
+            ...(route.authenticationObservable !== undefined ? { authObservable: route.authenticationObservable } : {}),
+            lastSeenAt: new Date(result.completedAt),
+          },
+        });
+      }
+    }
   });
 }
 

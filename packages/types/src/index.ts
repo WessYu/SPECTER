@@ -77,6 +77,12 @@ export interface RiskDeduction {
   readonly reason: string;
 }
 
+export interface ScanSurface {
+  readonly routes: readonly RouteInfo[];
+  readonly externalDomains: readonly ExternalDomain[];
+  readonly removedDomains?: readonly string[];
+}
+
 export interface ScanResult {
   readonly schemaVersion: SchemaVersion;
   readonly scanId: string;
@@ -90,6 +96,7 @@ export interface ScanResult {
   readonly findings: readonly Finding[];
   readonly modules: readonly ScanModuleResult[];
   readonly errors: readonly ScanError[];
+  readonly surface?: ScanSurface;
 }
 
 export interface ScanModuleResult {

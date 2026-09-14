@@ -130,6 +130,7 @@ model Scan {
   summaryJson    Json
   modulesJson    Json
   errorsJson     Json
+  surfaceJson    Json?
   startedAt      DateTime
   completedAt    DateTime
   durationMs     Int
