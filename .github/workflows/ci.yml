@@ -99,6 +99,15 @@ jobs:
           node integrations/github-action/dist/index.js
           test -s .specter/report.json
 
+      - name: Upload bundled GitHub Action
+        if: matrix.node == '20.11.1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: github-action-dist
+          path: integrations/github-action/dist/index.js
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Enforce validation result
         if: always()
         env:
