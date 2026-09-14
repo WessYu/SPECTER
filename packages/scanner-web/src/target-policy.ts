@@ -1,3 +1,4 @@
+import type { LookupAddress } from "node:dns";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { isBlockedIp, isMetadataHostname } from "./ip-policy.js";
@@ -36,7 +37,7 @@ export async function resolvePublicTarget(input: string | URL): Promise<Resolved
     return { url, address: hostname, family: isIP(hostname) as 4 | 6 };
   }
 
-  let addresses: Awaited<ReturnType<typeof lookup>>;
+  let addresses: LookupAddress[];
   try {
     addresses = await lookup(hostname, { all: true, verbatim: true });
   } catch {
@@ -52,5 +53,7 @@ export async function resolvePublicTarget(input: string | URL): Promise<Resolved
   const chosen = addresses[0];
   if (!chosen)
     throw new TargetPolicyError("DNS_FAILURE", `No usable address resolved for ${hostname}`);
+  if (chosen.family !== 4 && chosen.family !== 6)
+    throw new TargetPolicyError("DNS_FAILURE", `Unsupported address family for ${hostname}`);
   return { url, address: chosen.address, family: chosen.family };
 }

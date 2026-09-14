@@ -38,6 +38,10 @@ export async function inspectTls(input: string, timeoutMs = 10_000): Promise<Tls
       const validToMs = certificate.valid_to ? Date.parse(certificate.valid_to) : Number.NaN;
       const protocol = socket.getProtocol();
       const authorizationError = socket.authorizationError;
+      const issuerCommonName = certificate.issuer?.CN;
+      const issuer = Array.isArray(issuerCommonName)
+        ? issuerCommonName.join(", ")
+        : issuerCommonName;
       const result: TlsInspection = {
         applicable: true,
         authorized: socket.authorized,
@@ -49,7 +53,7 @@ export async function inspectTls(input: string, timeoutMs = 10_000): Promise<Tls
           ? { daysUntilExpiry: Math.floor((validToMs - Date.now()) / 86_400_000) }
           : {}),
         hostnameValid: !identityError,
-        ...(certificate.issuer?.CN ? { issuer: certificate.issuer.CN } : {}),
+        ...(issuer ? { issuer } : {}),
       };
       socket.end();
       resolve(result);

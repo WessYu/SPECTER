@@ -25,7 +25,7 @@ describe("build scanner", () => {
     await writeFile(path.join(root, "dist", "app.js.map"), `{}`);
     const result = await scanBuild(root, { outputDirectories: ["dist"] });
     expect(result.findings.map((item) => item.ruleId)).toEqual(
-      expect.arrayContaining(["SPECTER-BUILD-001", "SPECTER-BUILD-002"]),
+      expect.arrayContaining(["SPECTER-BUILD-001", "SPECTER-BUILD-003"]),
     );
     expect(JSON.stringify(result.findings)).not.toContain("spt_test_Q7m9Z2x8N4v6K1r5T3w0");
   });

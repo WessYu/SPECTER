@@ -6,7 +6,10 @@ import { createFinding, redactEvidence } from "../packages/core/dist/index.js";
 import { parseConfigSource, validateConfig } from "../packages/config/dist/index.js";
 import { serializeSarif } from "../packages/reporter/dist/index.js";
 import { calculateRiskScore } from "../packages/risk-engine/dist/index.js";
-import { scanDependencies, StaticAdvisoryProvider } from "../packages/scanner-dependencies/dist/index.js";
+import {
+  scanDependencies,
+  StaticAdvisoryProvider,
+} from "../packages/scanner-dependencies/dist/index.js";
 import { scanSecrets } from "../packages/scanner-secrets/dist/index.js";
 import { scanSource } from "../packages/scanner-static/dist/index.js";
 import { analyzeTls, resolvePublicTarget } from "../packages/scanner-web/dist/index.js";
