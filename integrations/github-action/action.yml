@@ -1,0 +1,31 @@
+name: SPECTER Security
+summary: Application security from source to production
+description: Runs SPECTER defensively in CI and fails on new security regressions according to policy.
+author: WessYu
+inputs:
+  target:
+    description: Project path or HTTP(S) URL to scan
+    required: false
+    default: .
+  fail-on:
+    description: Minimum new severity that fails the gate (critical, high, medium, low, none)
+    required: false
+    default: high
+  max-score-drop:
+    description: Maximum allowed score drop relative to baseline
+    required: false
+    default: "5"
+  baseline:
+    description: Optional previous SPECTER JSON report path
+    required: false
+    default: ""
+  offline:
+    description: Skip online advisory lookups
+    required: false
+    default: "false"
+runs:
+  using: node20
+  main: dist/index.js
+branding:
+  icon: shield
+  color: gray-dark

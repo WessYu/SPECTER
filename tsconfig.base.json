@@ -52,6 +52,9 @@
       ],
       "@specter/reporter": [
         "packages/reporter/src/index.ts"
+      ],
+      "@specter-security/cli": [
+        "packages/cli/src/index.ts"
       ]
     }
   }
