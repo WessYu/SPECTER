@@ -1,15 +1,35 @@
 # Rules
 
-SPECTER favors a smaller deterministic rule set over large volumes of shallow findings.
+SPECTER favors deterministic evidence over a large volume of shallow alerts.
 
-Current source rules cover dynamic code execution (`eval`, `new Function`), unsafe raw HTML, `document.write`, sensitive token storage in `localStorage`, non-local plaintext HTTP and suspicious private environment references in client-facing code.
+Every finding includes a stable `ruleId`, severity, confidence, category, source, fingerprint and remediation. Active findings additionally identify scanner, phase, route/method/parameter when applicable, safe evidence and safe reproduction.
 
-Secret rules detect credential-like values such as Stripe/GitHub/AWS-style keys, private keys, database URLs, JWT-like values and high-entropy secret assignments. Evidence is redacted before report output.
+## Active rule namespace
 
-Remote rules inspect security headers, CSP, cookies, CORS and TLS state. Missing controls are scored contextually rather than automatically labeled critical.
+Active rules never reuse passive/static IDs.
 
-Build rules inspect generated text artifacts for exposed secrets, source maps, copied env files, private/internal URLs and debug information.
+| Rule | Meaning |
+| --- | --- |
+| `SPECTER-ACTIVE-REFLECTION-001` | inert input marker reflected by a live response |
+| `SPECTER-ACTIVE-DOM-001` | controllable input correlated with client-side DOM sources/sinks |
+| `SPECTER-ACTIVE-REDIRECT-001` | external reserved redirect destination accepted |
+| `SPECTER-ACTIVE-COOKIE-001` | sensitive cookie missing defensive scope/attributes |
+| `SPECTER-ACTIVE-SESSION-001` | test session identifier not rotated after login |
+| `SPECTER-ACTIVE-SESSION-002` | previous test session remains valid after logout |
+| `SPECTER-ACTIVE-CSRF-001` | CSRF defense could not be safely confirmed |
+| `SPECTER-ACTIVE-AUTH-001` | private-like route behaves equivalently when anonymous |
+| `SPECTER-ACTIVE-METHOD-001` | unexpected state-changing methods advertised |
+| `SPECTER-ACTIVE-CORS-001` | untrusted Origin accepted with credentials |
+| `SPECTER-ACTIVE-CORS-002` | arbitrary Origin reflection |
+| `SPECTER-ACTIVE-CACHE-001` | authenticated response may be cacheable |
+| `SPECTER-ACTIVE-MIME-001` | live MIME type conflicts with JSON-shaped content |
+| `SPECTER-ACTIVE-LEAK-001` | stack/database/path/framework diagnostics exposed |
+| `SPECTER-ACTIVE-HOST-001` | forwarded-host input influences output |
+| `SPECTER-ACTIVE-HOST-002` | Host input influences output |
+| `SPECTER-ACTIVE-HEADERS-001` | security-header behavior differs across routes |
+| `SPECTER-ACTIVE-TLS-001` | certificate trust/validity failure |
+| `SPECTER-ACTIVE-HTTPS-001` | HTTP does not consistently redirect to HTTPS |
 
-Dependency findings come from the selected advisory provider and preserve whether the affected package is direct or transitive.
+`confirmed` means a safe condition was reproduced. `potential` means evidence is strong but not exploit confirmation. `inconclusive` is used when proving more would require unsafe mutation or assumptions; it does not block CI by default.
 
-Every finding includes a stable `ruleId`, severity, confidence, category, source, fingerprint and remediation. Fingerprints drive regression comparison.
+Existing source, secret, build, dependency and passive remote rules remain unchanged and keep their existing IDs and fingerprints.

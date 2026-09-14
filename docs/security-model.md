@@ -1,25 +1,60 @@
 # Security model
 
-SPECTER is defensive software.
+SPECTER is defensive application-security software for systems the operator owns or is explicitly authorized to test.
 
 It is designed to:
 
-- find security signals and unsafe configuration;
-- detect regressions between releases;
-- reduce common application-security risk;
-- fail CI according to explicit policy.
+- detect unsafe source/build/runtime conditions;
+- confirm selected conditions safely with inert evidence;
+- detect security regressions;
+- enforce CI policy.
 
-It does not:
+It does not implement:
 
-- prove absence of vulnerabilities;
-- replace a professional security assessment;
-- execute exploits;
-- brute-force credentials or directories;
-- bypass authentication or WAF controls;
-- establish persistence or lateral movement;
-- exfiltrate data;
-- automatically exploit CVEs.
+- brute force, password spraying or credential stuffing;
+- authentication or MFA bypass;
+- destructive exploitation;
+- RCE, shell execution or reverse shells;
+- persistence, privilege escalation or lateral movement;
+- exfiltration;
+- WAF evasion;
+- malware or C2;
+- automatic CVE exploitation;
+- mass scanning, DoS or unbounded fuzzing;
+- directory wordlists against guessed administrative paths.
 
-Remote scans are passive/low-impact and restricted to observable HTTP(S) behavior. The low-level requester resolves DNS before connecting, rejects non-public destinations, pins the chosen address for the connection and re-runs target policy after redirects. Localhost, private/link-local ranges and cloud metadata endpoints are blocked.
+## Passive remote scanning
 
-Runtime browser scans are opt-in. Browser networking is harder to pin against DNS rebinding because Chromium owns final resolution; for that reason runtime scanning is not the mechanism used to claim strict SSRF isolation in untrusted multi-tenant environments.
+Passive low-level requests resolve DNS before connecting, reject private/reserved destinations, pin the selected address and revalidate redirect destinations.
+
+## Authorized active scanning
+
+Active scanning is a separate module. A remote URL is not enough to authorize it.
+
+Authorization modes are:
+
+1. localhost / loopback: automatically authorized for local testing;
+2. explicitly configured preview hostname;
+3. verified remote hostname through `/.well-known/specter-verification.txt`.
+
+Remote authorization is hostname-specific and expires. Redirects to another hostname are not authorized.
+
+Verification tokens are generated with cryptographic randomness. The local and API stores persist token hashes rather than plaintext verification tokens after generation.
+
+Active requests have a hard request budget, request-rate limit, endpoint/parameter caps, timeouts and cancellation. Evidence is passed through central redaction.
+
+## Safe validation contract
+
+SPECTER uses inert markers such as `SPECTER_CANARY_<random>` to detect reflection. It does not send functional XSS payloads.
+
+Open redirect checks use the reserved non-routable destination `https://specter.invalid/` and never follow that redirect.
+
+Host and forwarded-header checks use `specter.invalid` only while the network connection remains DNS-pinned to the authorized target. They are not SSRF probes.
+
+CSRF checks prefer an `inconclusive` result rather than performing an unsafe mutation.
+
+POST requests are limited to observed login/logout flows when the operator has explicitly provided a test account. Passwords, Authorization values, full cookies and session IDs are not stored in reports or audit logs.
+
+`confirmed` means the unsafe condition was reproduced with safe evidence. It does not mean SPECTER exploited the application.
+
+SPECTER cannot prove an application is secure and does not replace a professional manual assessment.

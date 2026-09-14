@@ -1,18 +1,60 @@
 # Configuration
 
-SPECTER loads `specter.config.ts` first, then `specter.config.json` when present.
+SPECTER loads `specter.config.ts` first and then `specter.config.json`.
 
-The `.ts` form is deliberately a **data-only syntax**: object/array/string/number/boolean/null literals, comments and `export default` are accepted. Imports, function calls, property access, template interpolation and arbitrary expressions are rejected. This prevents configuration loading from becoming code execution during CI scans.
+The TypeScript form is data-only. Imports, function calls, property access, template interpolation and arbitrary expressions are rejected. Unknown keys fail closed.
 
-Top-level keys:
+```ts
+export default {
+  failOn: "high",
+  maxScoreDrop: 5,
+  ignore: [],
+  suppressions: [],
+  scan: {
+    source: true,
+    build: true,
+    dependencies: true,
+    remote: true,
+    runtime: false,
+  },
+  active: {
+    enabled: false,
+    profile: "safe",
+    maxRequests: 150,
+    maxRequestsPerSecond: 3,
+    concurrency: 2,
+    requestTimeoutMs: 5000,
+    maxEndpoints: 40,
+    maxParametersPerEndpoint: 10,
+    allowStateChangingMethods: false,
+    previewHosts: [],
+  },
+  limits: {
+    maxFileBytes: 1000000,
+    requestTimeoutMs: 10000,
+    scanTimeoutMs: 60000,
+    maxRedirects: 5,
+    maxPages: 20,
+    maxResponseBytes: 5000000,
+    concurrency: 4,
+  },
+};
+```
 
-- `failOn`: CI severity threshold;
-- `maxScoreDrop`: allowed score regression;
-- `ignore`: rule IDs suppressed with a generated configuration reason;
-- `suppressions`: auditable rule/fingerprint suppressions with reason and optional expiration;
-- `scan`: source/build/dependencies/remote/runtime switches;
-- `limits`: file, request, page, redirect, response and concurrency limits.
+## Active configuration
 
-Unknown keys fail closed with a configuration error.
+`active.enabled` defaults to false. The explicit commands `pentest` and `scan --active` are themselves opt-in and therefore enable the active engine for that invocation.
 
-Prefer targeted `suppressions` over broad `ignore` entries because targeted suppressions preserve rationale and expiry.
+`profile` accepts only `safe` or `standard`. There is intentionally no aggressive profile.
+
+`maxRequests` is a hard ceiling. A request consumes budget before it is issued, so a scan cannot exceed the configured value.
+
+`maxRequestsPerSecond` limits issuance rate. `concurrency` is a ceiling; the current engine is sequential and therefore remains below it.
+
+`requestTimeoutMs`, `maxEndpoints` and `maxParametersPerEndpoint` bound scan work.
+
+`allowStateChangingMethods` defaults to false. SPECTER does not invoke arbitrary state-changing application operations. Login/logout requests are only used with an explicit test account and are limited to the observed authentication flow.
+
+`previewHosts` is an explicit authorization mechanism for preview environments. Every hostname must be listed separately. Do not use wildcard-like values.
+
+Invalid active configuration returns CLI exit code 2.
