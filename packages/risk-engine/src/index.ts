@@ -1,4 +1,12 @@
-import type { Confidence, Finding, FindingCategory, RiskDeduction, RiskScore, Severity, SeveritySummary } from "@specter/types";
+import type {
+  Confidence,
+  Finding,
+  FindingCategory,
+  RiskDeduction,
+  RiskScore,
+  Severity,
+  SeveritySummary,
+} from "@specter/types";
 
 const severityWeight: Readonly<Record<Severity, number>> = {
   critical: 28,
@@ -50,9 +58,15 @@ function scoreBand(value: number): RiskScore["band"] {
 }
 
 function deductionFor(finding: Finding, context: RiskContext): RiskDeduction {
-  const isNew = context.baselineFingerprints ? !context.baselineFingerprints.has(finding.fingerprint) : false;
+  const isNew = context.baselineFingerprints
+    ? !context.baselineFingerprints.has(finding.fingerprint)
+    : false;
   const noveltyMultiplier = isNew ? 1.12 : 1;
-  const raw = severityWeight[finding.severity] * confidenceMultiplier[finding.confidence] * categoryMultiplier[finding.category] * noveltyMultiplier;
+  const raw =
+    severityWeight[finding.severity] *
+    confidenceMultiplier[finding.confidence] *
+    categoryMultiplier[finding.category] *
+    noveltyMultiplier;
   const points = Math.min(35, Math.max(0, Math.round(raw * 10) / 10));
   return {
     ruleId: finding.ruleId,
@@ -62,12 +76,16 @@ function deductionFor(finding: Finding, context: RiskContext): RiskDeduction {
   };
 }
 
-export function calculateRiskScore(findings: readonly Finding[], context: RiskContext = {}): RiskScore {
+export function calculateRiskScore(
+  findings: readonly Finding[],
+  context: RiskContext = {},
+): RiskScore {
   const unique = new Map<string, Finding>();
   for (const finding of findings) {
     if (finding.status === "suppressed") continue;
     const current = unique.get(finding.fingerprint);
-    if (!current || severityWeight[finding.severity] > severityWeight[current.severity]) unique.set(finding.fingerprint, finding);
+    if (!current || severityWeight[finding.severity] > severityWeight[current.severity])
+      unique.set(finding.fingerprint, finding);
   }
 
   const deductions = [...unique.values()]

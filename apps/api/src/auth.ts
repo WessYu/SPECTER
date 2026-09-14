@@ -10,14 +10,24 @@ export interface AuthContext {
   readonly kind: "api-key" | "session";
   readonly role?: OrganizationRole;
 }
-interface ApiKeyRow { readonly id: string; readonly organizationId: string; readonly keyHash: string; readonly revokedAt: Date | null; }
+interface ApiKeyRow {
+  readonly id: string;
+  readonly organizationId: string;
+  readonly keyHash: string;
+  readonly revokedAt: Date | null;
+}
 interface SessionRow {
   readonly id: string;
   readonly userId: string;
   readonly organizationId: string;
   readonly expiresAt: Date;
   readonly revokedAt: Date | null;
-  readonly user: { readonly memberships: ReadonlyArray<{ readonly role: OrganizationRole; readonly organizationId: string }> };
+  readonly user: {
+    readonly memberships: ReadonlyArray<{
+      readonly role: OrganizationRole;
+      readonly organizationId: string;
+    }>;
+  };
 }
 
 const contexts = new WeakMap<object, AuthContext>();
@@ -27,33 +37,62 @@ export function getAuth(request: FastifyRequest): AuthContext {
   return context;
 }
 
-async function authenticateApiKey(prisma: PrismaClient, token: string): Promise<AuthContext | undefined> {
+async function authenticateApiKey(
+  prisma: PrismaClient,
+  token: string,
+): Promise<AuthContext | undefined> {
   const prefix = parseApiKeyPrefix(token);
   if (!prefix) return undefined;
-  const record = await prisma.apiKey.findUnique({
+  const record = (await prisma.apiKey.findUnique({
     where: { prefix },
     select: { id: true, organizationId: true, keyHash: true, revokedAt: true },
-  }) as ApiKeyRow | null;
-  if (!record || record.revokedAt || !constantTimeHashMatch(token, record.keyHash)) return undefined;
-  void prisma.apiKey.update({ where: { id: record.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
+  })) as ApiKeyRow | null;
+  if (!record || record.revokedAt || !constantTimeHashMatch(token, record.keyHash))
+    return undefined;
+  void prisma.apiKey
+    .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
+    .catch(() => undefined);
   return { organizationId: record.organizationId, principalId: record.id, kind: "api-key" };
 }
 
-async function authenticateSession(prisma: PrismaClient, request: FastifyRequest): Promise<AuthContext | undefined> {
+async function authenticateSession(
+  prisma: PrismaClient,
+  request: FastifyRequest,
+): Promise<AuthContext | undefined> {
   const token = parseCookieHeader(request.headers.cookie).get(SESSION_COOKIE_NAME);
   if (!token?.startsWith("sp_session_")) return undefined;
-  const record = await prisma.session.findUnique({
+  const record = (await prisma.session.findUnique({
     where: { tokenHash: hashOpaqueToken(token) },
     select: {
-      id: true, userId: true, organizationId: true, expiresAt: true, revokedAt: true,
-      user: { select: { memberships: { where: { organizationId: { not: "" } }, select: { organizationId: true, role: true } } } },
+      id: true,
+      userId: true,
+      organizationId: true,
+      expiresAt: true,
+      revokedAt: true,
+      user: {
+        select: {
+          memberships: {
+            where: { organizationId: { not: "" } },
+            select: { organizationId: true, role: true },
+          },
+        },
+      },
     },
-  }) as SessionRow | null;
+  })) as SessionRow | null;
   if (!record || record.revokedAt || record.expiresAt.getTime() <= Date.now()) return undefined;
-  const membership = record.user.memberships.find((item) => item.organizationId === record.organizationId);
+  const membership = record.user.memberships.find(
+    (item) => item.organizationId === record.organizationId,
+  );
   if (!membership) return undefined;
-  void prisma.session.update({ where: { id: record.id }, data: { lastUsedAt: new Date() } }).catch(() => undefined);
-  return { organizationId: record.organizationId, principalId: record.userId, kind: "session", role: membership.role };
+  void prisma.session
+    .update({ where: { id: record.id }, data: { lastUsedAt: new Date() } })
+    .catch(() => undefined);
+  return {
+    organizationId: record.organizationId,
+    principalId: record.userId,
+    kind: "session",
+    role: membership.role,
+  };
 }
 
 export function createAuthHook(prisma: PrismaClient) {
@@ -64,7 +103,10 @@ export function createAuthHook(prisma: PrismaClient) {
     const context = bearer
       ? await authenticateApiKey(prisma, bearer)
       : await authenticateSession(prisma, request);
-    if (!context) { reply.code(401).send({ error: "unauthorized" }); return; }
+    if (!context) {
+      reply.code(401).send({ error: "unauthorized" });
+      return;
+    }
     contexts.set(request as object, context);
   };
 }

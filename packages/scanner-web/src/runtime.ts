@@ -45,21 +45,37 @@ export interface RuntimeScanOptions {
 }
 
 function registrableHost(url: string): string | undefined {
-  try { return new URL(url).hostname.toLowerCase(); } catch { return undefined; }
+  try {
+    return new URL(url).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
 }
 
 function sameSiteHost(candidate: string, root: string): boolean {
   return candidate === root || candidate.endsWith(`.${root}`) || root.endsWith(`.${candidate}`);
 }
 
-export async function scanRuntime(target: string, options: RuntimeScanOptions = {}): Promise<RuntimeScanResult> {
+export async function scanRuntime(
+  target: string,
+  options: RuntimeScanOptions = {},
+): Promise<RuntimeScanResult> {
   const validated = await resolvePublicTarget(target);
   let playwright: typeof import("playwright");
-  try { playwright = await import("playwright"); }
-  catch { throw new Error("Playwright is required for runtime scans. Install optional dependency 'playwright' and its Chromium browser."); }
+  try {
+    playwright = await import("playwright");
+  } catch {
+    throw new Error(
+      "Playwright is required for runtime scans. Install optional dependency 'playwright' and its Chromium browser.",
+    );
+  }
 
   const browser = await playwright.chromium.launch({ headless: true });
-  const context = await browser.newContext({ ignoreHTTPSErrors: false, serviceWorkers: "block", javaScriptEnabled: true });
+  const context = await browser.newContext({
+    ignoreHTTPSErrors: false,
+    serviceWorkers: "block",
+    javaScriptEnabled: true,
+  });
   const page = await context.newPage();
   const requests: RuntimeRequestRecord[] = [];
   const responses: RuntimeResponseRecord[] = [];
@@ -75,19 +91,32 @@ export async function scanRuntime(target: string, options: RuntimeScanOptions = 
       const request = route.request();
       const method = request.method().toUpperCase();
       const url = request.url();
-      if (!url.startsWith("http://") && !url.startsWith("https://")) { await route.continue(); return; }
+      if (!url.startsWith("http://") && !url.startsWith("https://")) {
+        await route.continue();
+        return;
+      }
       if (method !== "GET" && method !== "HEAD" && method !== "OPTIONS") {
         blockedRequests.push(`${method} ${url}`);
         await route.abort("blockedbyclient");
         return;
       }
-      try { await resolvePublicTarget(url); await route.continue(); }
-      catch { blockedRequests.push(`${method} ${url}`); await route.abort("blockedbyclient"); }
+      try {
+        await resolvePublicTarget(url);
+        await route.continue();
+      } catch {
+        blockedRequests.push(`${method} ${url}`);
+        await route.abort("blockedbyclient");
+      }
     });
 
     page.on("request", (request) => {
       const url = request.url();
-      requests.push({ url, method: request.method(), resourceType: request.resourceType(), redirected: request.redirectedFrom() !== null });
+      requests.push({
+        url,
+        method: request.method(),
+        resourceType: request.resourceType(),
+        redirected: request.redirectedFrom() !== null,
+      });
       const host = registrableHost(url);
       if (host && !sameSiteHost(host, rootHost)) {
         const types = external.get(host) ?? new Set<string>();
@@ -97,7 +126,12 @@ export async function scanRuntime(target: string, options: RuntimeScanOptions = 
     });
     page.on("response", async (response) => {
       const headers = await response.headers();
-      const record: RuntimeResponseRecord = { url: response.url(), status: response.status(), headers, ...(headers["content-type"] ? { contentType: headers["content-type"] } : {}) };
+      const record: RuntimeResponseRecord = {
+        url: response.url(),
+        status: response.status(),
+        headers,
+        ...(headers["content-type"] ? { contentType: headers["content-type"] } : {}),
+      };
       responses.push(record);
       try {
         const parsed = new URL(response.url());
@@ -107,16 +141,25 @@ export async function scanRuntime(target: string, options: RuntimeScanOptions = 
             method: response.request().method(),
             status: response.status(),
             ...(headers["content-type"] ? { contentType: headers["content-type"] } : {}),
-            ...(headers["access-control-allow-origin"] ? { cors: headers["access-control-allow-origin"] } : {}),
+            ...(headers["access-control-allow-origin"]
+              ? { cors: headers["access-control-allow-origin"] }
+              : {}),
             headers,
           });
         }
-      } catch { /* non-URL browser internals are ignored */ }
+      } catch {
+        /* non-URL browser internals are ignored */
+      }
     });
-    page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text().slice(0, 2_000)); });
+    page.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text().slice(0, 2_000));
+    });
     page.on("pageerror", (error) => pageErrors.push(error.message.slice(0, 2_000)));
 
-    await page.goto(validated.url.toString(), { waitUntil: "domcontentloaded", timeout: options.navigationTimeoutMs ?? 20_000 });
+    await page.goto(validated.url.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: options.navigationTimeoutMs ?? 20_000,
+    });
     const finalUrl = page.url();
     await resolvePublicTarget(finalUrl);
     const title = await page.title();
@@ -140,7 +183,14 @@ export async function scanRuntime(target: string, options: RuntimeScanOptions = 
       responses,
       consoleErrors,
       pageErrors,
-      externalDomains: [...external.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([domain, resourceTypes]) => ({ domain, classification: "unknown", resourceTypes: [...resourceTypes].sort(), page: finalUrl })),
+      externalDomains: [...external.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([domain, resourceTypes]) => ({
+          domain,
+          classification: "unknown",
+          resourceTypes: [...resourceTypes].sort(),
+          page: finalUrl,
+        })),
       routes: [...observedRoutes.values()].sort((a, b) => a.url.localeCompare(b.url)),
       cookies,
       blockedRequests,

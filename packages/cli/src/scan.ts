@@ -20,7 +20,9 @@ export interface ScanExecutionOptions {
   readonly config?: SpecterConfig;
 }
 
-function elapsed(started: number): number { return Math.max(0, Date.now() - started); }
+function elapsed(started: number): number {
+  return Math.max(0, Date.now() - started);
+}
 function deduplicate(findings: readonly Finding[]): Finding[] {
   const unique = new Map<string, Finding>();
   for (const finding of findings) {
@@ -34,11 +36,19 @@ function deduplicate(findings: readonly Finding[]): Finding[] {
   return [...unique.values()];
 }
 
-function moduleResult(name: string, started: number, findingCount: number, status: ScanModuleResult["status"] = findingCount ? "warning" : "passed"): ScanModuleResult {
+function moduleResult(
+  name: string,
+  started: number,
+  findingCount: number,
+  status: ScanModuleResult["status"] = findingCount ? "warning" : "passed",
+): ScanModuleResult {
   return { name, durationMs: elapsed(started), findingCount, status };
 }
 
-export async function executeLocalScan(target: string, options: ScanExecutionOptions = {}): Promise<ScanResult> {
+export async function executeLocalScan(
+  target: string,
+  options: ScanExecutionOptions = {},
+): Promise<ScanResult> {
   const absolute = path.resolve(target);
   const config = options.config ?? defaultConfig;
   const startedMs = Date.now();
@@ -66,18 +76,40 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
     mark = Date.now();
     if (options.offline) {
       const inventory = await inspectDependencies(absolute);
-      modules.push({ name: `dependencies (${inventory.dependencies.length} inventoried; advisory query offline)`, durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
+      modules.push({
+        name: `dependencies (${inventory.dependencies.length} inventoried; advisory query offline)`,
+        durationMs: elapsed(mark),
+        findingCount: 0,
+        status: "skipped",
+      });
     } else {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(config.limits.requestTimeoutMs, 8_000));
+      const timer = setTimeout(
+        () => controller.abort(),
+        Math.min(config.limits.requestTimeoutMs, 8_000),
+      );
       try {
         const dependencies = await scanDependencies(absolute, new OsvProvider(), controller.signal);
         findings.push(...dependencies.findings);
-        modules.push(moduleResult(`dependencies:${dependencies.provider}`, mark, dependencies.findings.length));
+        modules.push(
+          moduleResult(`dependencies:${dependencies.provider}`, mark, dependencies.findings.length),
+        );
       } catch (error: unknown) {
-        modules.push({ name: "dependencies:osv.dev", durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
-        errors.push({ code: "DEPENDENCY_PROVIDER_UNAVAILABLE", message: error instanceof Error ? error.message : "Dependency provider failed", module: "dependencies", recoverable: true });
-      } finally { clearTimeout(timer); }
+        modules.push({
+          name: "dependencies:osv.dev",
+          durationMs: elapsed(mark),
+          findingCount: 0,
+          status: "skipped",
+        });
+        errors.push({
+          code: "DEPENDENCY_PROVIDER_UNAVAILABLE",
+          message: error instanceof Error ? error.message : "Dependency provider failed",
+          module: "dependencies",
+          recoverable: true,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
     }
   } else modules.push({ name: "dependencies", durationMs: 0, findingCount: 0, status: "skipped" });
 
@@ -85,7 +117,12 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
     mark = Date.now();
     const build = await scanBuild(absolute, { maxFileBytes: config.limits.maxFileBytes * 2 });
     findings.push(...build.findings);
-    modules.push({ name: `build:${build.framework}`, durationMs: elapsed(mark), findingCount: build.findings.length, status: build.outputs.length === 0 ? "skipped" : build.findings.length ? "warning" : "passed" });
+    modules.push({
+      name: `build:${build.framework}`,
+      durationMs: elapsed(mark),
+      findingCount: build.findings.length,
+      status: build.outputs.length === 0 ? "skipped" : build.findings.length ? "warning" : "passed",
+    });
   } else modules.push({ name: "build", durationMs: 0, findingCount: 0, status: "skipped" });
 
   const unique = deduplicate(findings);
@@ -95,8 +132,13 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
   ];
   const suppressionResult = applySuppressions(unique, suppressions);
   const reportFindings = [...suppressionResult.findings, ...suppressionResult.suppressed];
-  const baselineFingerprints = options.baseline ? new Set(options.baseline.findings.map((finding) => finding.fingerprint)) : undefined;
-  const score = calculateRiskScore(reportFindings, baselineFingerprints ? { baselineFingerprints } : {});
+  const baselineFingerprints = options.baseline
+    ? new Set(options.baseline.findings.map((finding) => finding.fingerprint))
+    : undefined;
+  const score = calculateRiskScore(
+    reportFindings,
+    baselineFingerprints ? { baselineFingerprints } : {},
+  );
   const completedMs = Date.now();
   return {
     schemaVersion: "1",
@@ -114,7 +156,10 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
   };
 }
 
-export async function executeRemoteScan(target: string, options: ScanExecutionOptions = {}): Promise<ScanResult> {
+export async function executeRemoteScan(
+  target: string,
+  options: ScanExecutionOptions = {},
+): Promise<ScanResult> {
   const config = options.config ?? defaultConfig;
   if (!config.scan.remote) throw new Error("Remote scanning is disabled by SPECTER configuration.");
   const startedMs = Date.now();
@@ -136,11 +181,31 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   mark = Date.now();
   let discoveredSurface: Awaited<ReturnType<typeof discoverSurface>> | undefined;
   try {
-    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: config.limits.maxPages, concurrency: config.limits.concurrency, includeRuntime: options.runtime ?? config.scan.runtime });
-    modules.push({ name: `surface:${discoveredSurface.routes.length} routes/${discoveredSurface.externalDomains.length} domains`, durationMs: elapsed(mark), findingCount: 0, status: "passed" });
+    discoveredSurface = await discoverSurface(remote.response.url, {
+      ...requestOptions,
+      maxPages: config.limits.maxPages,
+      concurrency: config.limits.concurrency,
+      includeRuntime: options.runtime ?? config.scan.runtime,
+    });
+    modules.push({
+      name: `surface:${discoveredSurface.routes.length} routes/${discoveredSurface.externalDomains.length} domains`,
+      durationMs: elapsed(mark),
+      findingCount: 0,
+      status: "passed",
+    });
   } catch (error: unknown) {
-    modules.push({ name: "surface", durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
-    errors.push({ code: "SURFACE_DISCOVERY_PARTIAL", message: error instanceof Error ? error.message : "Surface discovery failed", module: "surface", recoverable: true });
+    modules.push({
+      name: "surface",
+      durationMs: elapsed(mark),
+      findingCount: 0,
+      status: "skipped",
+    });
+    errors.push({
+      code: "SURFACE_DISCOVERY_PARTIAL",
+      message: error instanceof Error ? error.message : "Surface discovery failed",
+      module: "surface",
+      recoverable: true,
+    });
   }
 
   const unique = deduplicate(findings);
@@ -150,13 +215,22 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   ];
   const suppressionResult = applySuppressions(unique, suppressions);
   const reportFindings = [...suppressionResult.findings, ...suppressionResult.suppressed];
-  const baselineFingerprints = options.baseline ? new Set(options.baseline.findings.map((finding) => finding.fingerprint)) : undefined;
-  const score = calculateRiskScore(reportFindings, baselineFingerprints ? { baselineFingerprints } : {});
+  const baselineFingerprints = options.baseline
+    ? new Set(options.baseline.findings.map((finding) => finding.fingerprint))
+    : undefined;
+  const score = calculateRiskScore(
+    reportFindings,
+    baselineFingerprints ? { baselineFingerprints } : {},
+  );
   const completedMs = Date.now();
   return {
     schemaVersion: "1",
     scanId: randomUUID(),
-    target: { kind: "url", value: remote.response.url, displayName: new URL(remote.response.url).hostname },
+    target: {
+      kind: "url",
+      value: remote.response.url,
+      displayName: new URL(remote.response.url).hostname,
+    },
     startedAt,
     completedAt: new Date(completedMs).toISOString(),
     durationMs: completedMs - startedMs,
@@ -166,7 +240,15 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
     findings: reportFindings,
     modules,
     errors,
-    ...(discoveredSurface ? { surface: { routes: discoveredSurface.routes, externalDomains: discoveredSurface.externalDomains, removedDomains: discoveredSurface.removedDomains } } : {}),
+    ...(discoveredSurface
+      ? {
+          surface: {
+            routes: discoveredSurface.routes,
+            externalDomains: discoveredSurface.externalDomains,
+            removedDomains: discoveredSurface.removedDomains,
+          },
+        }
+      : {}),
   };
 }
 
@@ -182,7 +264,10 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
     scan.target.value,
     "",
     "Scanning",
-    ...scan.modules.map((module) => `${module.status === "passed" ? "✓" : module.status === "warning" ? "!" : module.status === "skipped" ? "-" : "x"} ${module.name} (${module.findingCount})`),
+    ...scan.modules.map(
+      (module) =>
+        `${module.status === "passed" ? "✓" : module.status === "warning" ? "!" : module.status === "skipped" ? "-" : "x"} ${module.name} (${module.findingCount})`,
+    ),
     "",
     "Security Score",
     `${scan.score.value}/100`,
@@ -195,7 +280,12 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
     "",
     `${scan.findings.filter((finding) => finding.status !== "suppressed").length} findings require review.`,
   ];
-  if (scan.errors.length) lines.push("", "Partial errors", ...scan.errors.map((error) => `- ${error.code}: ${error.message}`));
+  if (scan.errors.length)
+    lines.push(
+      "",
+      "Partial errors",
+      ...scan.errors.map((error) => `- ${error.code}: ${error.message}`),
+    );
   return `${lines.join("\n")}\n`;
 }
 

@@ -32,7 +32,10 @@ export interface WalkResult {
   readonly unreadableFiles: readonly string[];
 }
 
-export async function walkSourceFiles(root: string, options: WalkOptions = {}): Promise<WalkResult> {
+export async function walkSourceFiles(
+  root: string,
+  options: WalkOptions = {},
+): Promise<WalkResult> {
   const absoluteRoot = path.resolve(root);
   const maxFileBytes = options.maxFileBytes ?? 1_000_000;
   const ignores = new Set(DEFAULT_IGNORES);
@@ -64,7 +67,8 @@ export async function walkSourceFiles(root: string, options: WalkOptions = {}): 
         await visit(absolute);
         continue;
       }
-      if (!entry.isFile() || !SOURCE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) continue;
+      if (!entry.isFile() || !SOURCE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+        continue;
 
       try {
         const metadata = await stat(absolute);
@@ -73,7 +77,12 @@ export async function walkSourceFiles(root: string, options: WalkOptions = {}): 
           skippedLargeFiles.push(relative);
           continue;
         }
-        files.push({ path: relative, absolutePath: absolute, content: await readFile(absolute, "utf8"), size: metadata.size });
+        files.push({
+          path: relative,
+          absolutePath: absolute,
+          content: await readFile(absolute, "utf8"),
+          size: metadata.size,
+        });
       } catch {
         unreadableFiles.push(path.relative(absoluteRoot, absolute).replaceAll(path.sep, "/"));
       }

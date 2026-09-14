@@ -27,17 +27,10 @@
     },
     "target": {
       "type": "object",
-      "required": [
-        "kind",
-        "value"
-      ],
+      "required": ["kind", "value"],
       "properties": {
         "kind": {
-          "enum": [
-            "project",
-            "build",
-            "url"
-          ]
+          "enum": ["project", "build", "url"]
         },
         "value": {
           "type": "string",
@@ -62,13 +55,7 @@
       "minimum": 0
     },
     "status": {
-      "enum": [
-        "queued",
-        "running",
-        "completed",
-        "failed",
-        "cancelled"
-      ]
+      "enum": ["queued", "running", "completed", "failed", "cancelled"]
     },
     "score": {
       "type": "object"
@@ -87,10 +74,7 @@
     },
     "surface": {
       "type": "object",
-      "required": [
-        "routes",
-        "externalDomains"
-      ],
+      "required": ["routes", "externalDomains"],
       "properties": {
         "routes": {
           "type": "array"

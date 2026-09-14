@@ -49,5 +49,10 @@ export function isBlockedIp(address: string): boolean {
 
 export function isMetadataHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase().replace(/\.$/, "");
-  return normalized === "metadata.google.internal" || normalized === "metadata" || normalized.endsWith(".internal") || normalized === "instance-data";
+  return (
+    normalized === "metadata.google.internal" ||
+    normalized === "metadata" ||
+    normalized.endsWith(".internal") ||
+    normalized === "instance-data"
+  );
 }

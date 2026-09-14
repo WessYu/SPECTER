@@ -5,7 +5,11 @@ export interface SuppressionResult {
   readonly suppressed: readonly Finding[];
 }
 
-export function matchesSuppression(finding: Finding, suppression: Suppression, now = new Date()): boolean {
+export function matchesSuppression(
+  finding: Finding,
+  suppression: Suppression,
+  now = new Date(),
+): boolean {
   if (suppression.expiresAt) {
     const expires = Date.parse(suppression.expiresAt);
     if (!Number.isFinite(expires) || expires <= now.getTime()) return false;
@@ -17,7 +21,11 @@ export function matchesSuppression(finding: Finding, suppression: Suppression, n
   return true;
 }
 
-export function applySuppressions(findings: readonly Finding[], suppressions: readonly Suppression[], now = new Date()): SuppressionResult {
+export function applySuppressions(
+  findings: readonly Finding[],
+  suppressions: readonly Suppression[],
+  now = new Date(),
+): SuppressionResult {
   const active: Finding[] = [];
   const suppressed: Finding[] = [];
   for (const finding of findings) {

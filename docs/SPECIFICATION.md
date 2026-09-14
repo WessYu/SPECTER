@@ -200,12 +200,7 @@ Defina tipos compartilhados.
 Exemplo conceitual:
 
 ```ts
-type Severity =
-  | "info"
-  | "low"
-  | "medium"
-  | "high"
-  | "critical";
+type Severity = "info" | "low" | "medium" | "high" | "critical";
 
 type FindingCategory =
   | "secret"
@@ -245,15 +240,10 @@ interface Finding {
 
   confidence: "low" | "medium" | "high";
 
-  source:
-    | "static"
-    | "build"
-    | "dependency"
-    | "remote";
+  source: "static" | "build" | "dependency" | "remote";
 
   fingerprint: string;
 }
-
 ```
 
 Também criar:
@@ -853,7 +843,6 @@ Exemplo:
   "summary": {},
   "findings": []
 }
-
 ```
 
 Nunca mudar silenciosamente formato público.
@@ -875,18 +864,15 @@ Exemplo:
 export default {
   failOn: "high",
 
-  ignore: [
-    "SPECTER-LOW-001"
-  ],
+  ignore: ["SPECTER-LOW-001"],
 
   scan: {
     source: true,
     build: true,
     dependencies: true,
-    remote: true
-  }
+    remote: true,
+  },
 };
-
 ```
 
 Validar config estritamente.
@@ -1356,7 +1342,6 @@ Exemplo:
 - uses: specter-security/action@v1
   with:
     fail-on: high
-
 ```
 
 Resultado esperado em PR:

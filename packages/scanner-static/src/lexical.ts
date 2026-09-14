@@ -21,23 +21,33 @@ export function tokenizeCode(source: string): readonly CodeToken[] {
   const advance = (): string => {
     const char = source[index] ?? "";
     index += 1;
-    if (char === "\n") { line += 1; column = 1; } else column += 1;
+    if (char === "\n") {
+      line += 1;
+      column = 1;
+    } else column += 1;
     return char;
   };
 
   while (index < source.length) {
     const char = source[index] ?? "";
-    if (/\s/.test(char)) { advance(); continue; }
+    if (/\s/.test(char)) {
+      advance();
+      continue;
+    }
 
     if (char === "/" && source[index + 1] === "/") {
       while (index < source.length && advance() !== "\n") undefined;
       continue;
     }
     if (char === "/" && source[index + 1] === "*") {
-      advance(); advance();
+      advance();
+      advance();
       while (index < source.length) {
         const current = advance();
-        if (current === "*" && source[index] === "/") { advance(); break; }
+        if (current === "*" && source[index] === "/") {
+          advance();
+          break;
+        }
       }
       continue;
     }
@@ -47,8 +57,14 @@ export function tokenizeCode(source: string): readonly CodeToken[] {
       let escaped = false;
       while (index < source.length) {
         const current = advance();
-        if (escaped) { escaped = false; continue; }
-        if (current === "\\") { escaped = true; continue; }
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (current === "\\") {
+          escaped = true;
+          continue;
+        }
         if (current === quote) break;
       }
       continue;
@@ -69,13 +85,17 @@ export function tokenizeCode(source: string): readonly CodeToken[] {
   return tokens;
 }
 
-export function findIdentifierCall(tokens: readonly CodeToken[], identifier: string): readonly CodeToken[] {
+export function findIdentifierCall(
+  tokens: readonly CodeToken[],
+  identifier: string,
+): readonly CodeToken[] {
   const matches: CodeToken[] = [];
   for (let index = 0; index < tokens.length - 1; index += 1) {
     const token = tokens[index];
     const next = tokens[index + 1];
     const previous = index > 0 ? tokens[index - 1] : undefined;
-    if (token?.value === identifier && next?.value === "(" && previous?.value !== ".") matches.push(token);
+    if (token?.value === identifier && next?.value === "(" && previous?.value !== ".")
+      matches.push(token);
   }
   return matches;
 }

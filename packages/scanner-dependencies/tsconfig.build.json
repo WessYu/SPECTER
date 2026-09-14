@@ -4,19 +4,12 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
-      "@specter/types": [
-        "packages/types/dist/index.d.ts"
-      ],
-      "@specter/core": [
-        "packages/core/dist/index.d.ts"
-      ]
+      "@specter/types": ["packages/types/dist/index.d.ts"],
+      "@specter/core": ["packages/core/dist/index.d.ts"]
     },
     "sourceMap": false,
     "declarationMap": false,
     "incremental": false
   },
-  "include": [
-    "src/**/*.ts",
-    "../../types/node-ambient.d.ts"
-  ]
+  "include": ["src/**/*.ts", "../../types/node-ambient.d.ts"]
 }

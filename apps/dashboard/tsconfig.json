@@ -19,8 +19,5 @@
     ".next/types/**/*.ts",
     "../../types/dashboard-ambient.d.ts"
   ],
-  "exclude": [
-    "node_modules",
-    "test"
-  ]
+  "exclude": ["node_modules", "test"]
 }

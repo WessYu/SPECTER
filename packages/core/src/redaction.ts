@@ -7,7 +7,8 @@ const SECRET_PATTERNS: readonly RegExp[] = [
   /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\b/g,
 ];
 
-const SENSITIVE_KEY = /(password|passwd|secret|token|api[_-]?key|authorization|cookie|private[_-]?key)/i;
+const SENSITIVE_KEY =
+  /(password|passwd|secret|token|api[_-]?key|authorization|cookie|private[_-]?key)/i;
 
 export function redactString(value: string): string {
   let redacted = value;

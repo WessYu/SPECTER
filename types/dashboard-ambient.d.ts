@@ -1,7 +1,11 @@
 declare namespace JSX {
   interface Element {}
-  interface IntrinsicElements { [elementName: string]: any; }
-  interface IntrinsicAttributes { key?: string | number; }
+  interface IntrinsicElements {
+    [elementName: string]: any;
+  }
+  interface IntrinsicAttributes {
+    key?: string | number;
+  }
 }
 
 declare module "react" {
@@ -17,7 +21,9 @@ declare module "next" {
     title?: string | { default: string; template?: string };
     description?: string;
   }
-  export interface NextConfig { [key: string]: unknown; }
+  export interface NextConfig {
+    [key: string]: unknown;
+  }
 }
 
 declare module "next/link" {

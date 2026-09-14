@@ -18,17 +18,37 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
   if (command === "config") {
     try {
       const loaded = await loadConfig(io.cwd);
-      return { exitCode: 0, stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\n` };
+      return {
+        exitCode: 0,
+        stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\n`,
+      };
     } catch (error: unknown) {
-      return { exitCode: 2, stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n` };
+      return {
+        exitCode: 2,
+        stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n`,
+      };
     }
   }
-  if (command === "version" || command === "--version" || command === "-v") return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
+  if (command === "version" || command === "--version" || command === "-v")
+    return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
   if (command === "help" || command === "--help" || command === "-h") {
-    return { exitCode: 0, stdout: [
-      "SPECTER", "Application security from source to production.", "", "Usage:",
-      "  specter scan [path|url] [--json|--sarif] [--ci] [--fail-on high] [--max-score-drop 5]", "  specter scan [target] --baseline <report.json> [--output <path>]", "  specter compare <previous.json> <current.json>", "  specter doctor", "  specter init", "  specter config", "  specter version", "",
-    ].join("\n") };
+    return {
+      exitCode: 0,
+      stdout: [
+        "SPECTER",
+        "Application security from source to production.",
+        "",
+        "Usage:",
+        "  specter scan [path|url] [--json|--sarif] [--ci] [--fail-on high] [--max-score-drop 5]",
+        "  specter scan [target] --baseline <report.json> [--output <path>]",
+        "  specter compare <previous.json> <current.json>",
+        "  specter doctor",
+        "  specter init",
+        "  specter config",
+        "  specter version",
+        "",
+      ].join("\n"),
+    };
   }
   return { exitCode: 2, stderr: `Unknown command: ${command}\n` };
 }

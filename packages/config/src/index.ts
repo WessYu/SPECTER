@@ -58,7 +58,10 @@ function tokenizeConfig(source: string): readonly Token[] {
 
   while (index < source.length) {
     const char = source[index] ?? "";
-    if (/\s/.test(char)) { index += 1; continue; }
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
+    }
     if (char === "/" && source[index + 1] === "/") {
       index += 2;
       while (index < source.length && source[index] !== "\n") index += 1;
@@ -67,8 +70,10 @@ function tokenizeConfig(source: string): readonly Token[] {
     if (char === "/" && source[index + 1] === "*") {
       const start = index;
       index += 2;
-      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) index += 1;
-      if (index >= source.length) throw new Error(`Unterminated comment in SPECTER config at offset ${start}.`);
+      while (index < source.length && !(source[index] === "*" && source[index + 1] === "/"))
+        index += 1;
+      if (index >= source.length)
+        throw new Error(`Unterminated comment in SPECTER config at offset ${start}.`);
       index += 2;
       continue;
     }
@@ -85,16 +90,29 @@ function tokenizeConfig(source: string): readonly Token[] {
       let closed = false;
       while (index < source.length) {
         const current = source[index] ?? "";
-        if (current === quote) { index += 1; closed = true; break; }
+        if (current === quote) {
+          index += 1;
+          closed = true;
+          break;
+        }
         if (current === "\\") {
           const escaped = source[index + 1];
           if (escaped === undefined) break;
-          const map: Readonly<Record<string, string>> = { n: "\n", r: "\r", t: "\t", b: "\b", f: "\f", v: "\v", "0": "\0" };
+          const map: Readonly<Record<string, string>> = {
+            n: "\n",
+            r: "\r",
+            t: "\t",
+            b: "\b",
+            f: "\f",
+            v: "\v",
+            "0": "\0",
+          };
           value += map[escaped] ?? escaped;
           index += 2;
           continue;
         }
-        if (quote === "`" && current === "$" && source[index + 1] === "{") throw new Error("Template interpolation is not allowed in specter.config.ts.");
+        if (quote === "`" && current === "$" && source[index + 1] === "{")
+          throw new Error("Template interpolation is not allowed in specter.config.ts.");
         value += current;
         index += 1;
       }
@@ -126,9 +144,13 @@ class ConfigParser {
   readonly #tokens: readonly Token[];
   #index = 0;
 
-  constructor(tokens: readonly Token[]) { this.#tokens = tokens; }
+  constructor(tokens: readonly Token[]) {
+    this.#tokens = tokens;
+  }
 
-  #peek(): Token | undefined { return this.#tokens[this.#index]; }
+  #peek(): Token | undefined {
+    return this.#tokens[this.#index];
+  }
   #take(): Token {
     const token = this.#tokens[this.#index];
     if (!token) throw new Error("Unexpected end of SPECTER config.");
@@ -137,7 +159,8 @@ class ConfigParser {
   }
   #expect(value: string): void {
     const token = this.#take();
-    if (token.value !== value) throw new Error(`Expected '${value}' in SPECTER config at offset ${token.offset}.`);
+    if (token.value !== value)
+      throw new Error(`Expected '${value}' in SPECTER config at offset ${token.offset}.`);
   }
 
   parse(): unknown {
@@ -148,7 +171,10 @@ class ConfigParser {
     const value = this.#parseValue();
     if (this.#peek()?.value === ";") this.#take();
     const trailing = this.#peek();
-    if (trailing) throw new Error(`Unexpected token '${trailing.value}' in SPECTER config at offset ${trailing.offset}.`);
+    if (trailing)
+      throw new Error(
+        `Unexpected token '${trailing.value}' in SPECTER config at offset ${trailing.offset}.`,
+      );
     return value;
   }
 
@@ -169,7 +195,9 @@ class ConfigParser {
       if (token.value === "false") return false;
       if (token.value === "null") return null;
     }
-    throw new Error(`Only object literals, arrays, strings, numbers, booleans and null are allowed in specter.config.ts (offset ${token.offset}).`);
+    throw new Error(
+      `Only object literals, arrays, strings, numbers, booleans and null are allowed in specter.config.ts (offset ${token.offset}).`,
+    );
   }
 
   #parseObject(): Readonly<Record<string, unknown>> {
@@ -177,14 +205,21 @@ class ConfigParser {
     const result: Record<string, unknown> = {};
     while (this.#peek() && this.#peek()?.value !== "}") {
       const keyToken = this.#take();
-      if (keyToken.type !== "identifier" && keyToken.type !== "string") throw new Error(`Invalid object key at offset ${keyToken.offset}.`);
+      if (keyToken.type !== "identifier" && keyToken.type !== "string")
+        throw new Error(`Invalid object key at offset ${keyToken.offset}.`);
       this.#expect(":");
-      if (Object.prototype.hasOwnProperty.call(result, keyToken.value)) throw new Error(`Duplicate config key '${keyToken.value}'.`);
+      if (Object.prototype.hasOwnProperty.call(result, keyToken.value))
+        throw new Error(`Duplicate config key '${keyToken.value}'.`);
       result[keyToken.value] = this.#parseValue();
-      if (this.#peek()?.value === ",") { this.#take(); continue; }
+      if (this.#peek()?.value === ",") {
+        this.#take();
+        continue;
+      }
       if (this.#peek()?.value !== "}") {
         const token = this.#peek();
-        throw new Error(`Expected ',' or '}' in SPECTER config${token ? ` at offset ${token.offset}` : ""}.`);
+        throw new Error(
+          `Expected ',' or '}' in SPECTER config${token ? ` at offset ${token.offset}` : ""}.`,
+        );
       }
     }
     this.#expect("}");
@@ -196,10 +231,15 @@ class ConfigParser {
     const result: unknown[] = [];
     while (this.#peek() && this.#peek()?.value !== "]") {
       result.push(this.#parseValue());
-      if (this.#peek()?.value === ",") { this.#take(); continue; }
+      if (this.#peek()?.value === ",") {
+        this.#take();
+        continue;
+      }
       if (this.#peek()?.value !== "]") {
         const token = this.#peek();
-        throw new Error(`Expected ',' or ']' in SPECTER config${token ? ` at offset ${token.offset}` : ""}.`);
+        throw new Error(
+          `Expected ',' or ']' in SPECTER config${token ? ` at offset ${token.offset}` : ""}.`,
+        );
       }
     }
     this.#expect("]");
@@ -215,50 +255,82 @@ function validateSuppressions(value: unknown): readonly ConfigSuppression[] {
   if (value === undefined) return [];
   if (!Array.isArray(value)) throw new Error("suppressions must be an array.");
   return value.map((item, index) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item)) throw new Error(`suppressions[${index}] must be an object.`);
+    if (item === null || typeof item !== "object" || Array.isArray(item))
+      throw new Error(`suppressions[${index}] must be an object.`);
     const row = item as Record<string, unknown>;
     const allowed = new Set(["ruleId", "fingerprint", "reason", "expiresAt"]);
     const unknown = Object.keys(row).filter((key) => !allowed.has(key));
-    if (unknown.length) throw new Error(`Unknown suppressions[${index}] keys: ${unknown.join(", ")}`);
-    const ruleId = typeof row.ruleId === "string" && row.ruleId.trim() ? row.ruleId.trim() : undefined;
-    const fingerprint = typeof row.fingerprint === "string" && row.fingerprint.trim() ? row.fingerprint.trim() : undefined;
-    if (!ruleId && !fingerprint) throw new Error(`suppressions[${index}] requires ruleId or fingerprint.`);
-    if (typeof row.reason !== "string" || row.reason.trim().length < 3) throw new Error(`suppressions[${index}].reason must contain at least 3 characters.`);
-    if (row.expiresAt !== undefined && (typeof row.expiresAt !== "string" || !Number.isFinite(Date.parse(row.expiresAt)))) throw new Error(`suppressions[${index}].expiresAt must be a valid date-time string.`);
+    if (unknown.length)
+      throw new Error(`Unknown suppressions[${index}] keys: ${unknown.join(", ")}`);
+    const ruleId =
+      typeof row.ruleId === "string" && row.ruleId.trim() ? row.ruleId.trim() : undefined;
+    const fingerprint =
+      typeof row.fingerprint === "string" && row.fingerprint.trim()
+        ? row.fingerprint.trim()
+        : undefined;
+    if (!ruleId && !fingerprint)
+      throw new Error(`suppressions[${index}] requires ruleId or fingerprint.`);
+    if (typeof row.reason !== "string" || row.reason.trim().length < 3)
+      throw new Error(`suppressions[${index}].reason must contain at least 3 characters.`);
+    if (
+      row.expiresAt !== undefined &&
+      (typeof row.expiresAt !== "string" || !Number.isFinite(Date.parse(row.expiresAt)))
+    )
+      throw new Error(`suppressions[${index}].expiresAt must be a valid date-time string.`);
     return {
       ...(ruleId ? { ruleId } : {}),
       ...(fingerprint ? { fingerprint } : {}),
       reason: row.reason.trim(),
-      ...(typeof row.expiresAt === "string" ? { expiresAt: new Date(row.expiresAt).toISOString() } : {}),
+      ...(typeof row.expiresAt === "string"
+        ? { expiresAt: new Date(row.expiresAt).toISOString() }
+        : {}),
     };
   });
 }
 
 export function validateConfig(input: unknown): SpecterConfig {
   if (input === undefined) return defaultConfig;
-  if (input === null || typeof input !== "object" || Array.isArray(input)) throw new Error("SPECTER config must be an object.");
+  if (input === null || typeof input !== "object" || Array.isArray(input))
+    throw new Error("SPECTER config must be an object.");
   const value = input as Record<string, unknown>;
   const allowed = new Set(["failOn", "maxScoreDrop", "ignore", "suppressions", "scan", "limits"]);
   const unknownKeys = Object.keys(value).filter((key) => !allowed.has(key));
   if (unknownKeys.length) throw new Error(`Unknown SPECTER config keys: ${unknownKeys.join(", ")}`);
 
   const failOn = value.failOn ?? defaultConfig.failOn;
-  if (!["critical", "high", "medium", "low", "none"].includes(String(failOn))) throw new Error("failOn must be critical, high, medium, low or none.");
+  if (!["critical", "high", "medium", "low", "none"].includes(String(failOn)))
+    throw new Error("failOn must be critical, high, medium, low or none.");
   const maxScoreDrop = value.maxScoreDrop ?? defaultConfig.maxScoreDrop;
-  if (typeof maxScoreDrop !== "number" || !Number.isFinite(maxScoreDrop) || maxScoreDrop < 0 || maxScoreDrop > 100) throw new Error("maxScoreDrop must be between 0 and 100.");
+  if (
+    typeof maxScoreDrop !== "number" ||
+    !Number.isFinite(maxScoreDrop) ||
+    maxScoreDrop < 0 ||
+    maxScoreDrop > 100
+  )
+    throw new Error("maxScoreDrop must be between 0 and 100.");
   const ignore = value.ignore ?? defaultConfig.ignore;
-  if (!Array.isArray(ignore) || ignore.some((item) => typeof item !== "string" || item.trim().length === 0)) throw new Error("ignore must be an array of non-empty rule ids.");
+  if (
+    !Array.isArray(ignore) ||
+    ignore.some((item) => typeof item !== "string" || item.trim().length === 0)
+  )
+    throw new Error("ignore must be an array of non-empty rule ids.");
   const suppressions = validateSuppressions(value.suppressions);
 
-  const mergeBooleanGroup = <T extends Record<string, boolean>>(raw: unknown, defaults: T, name: string): T => {
+  const mergeBooleanGroup = <T extends Record<string, boolean>>(
+    raw: unknown,
+    defaults: T,
+    name: string,
+  ): T => {
     if (raw === undefined) return defaults;
-    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${name} must be an object.`);
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw))
+      throw new Error(`${name} must be an object.`);
     const source = raw as Record<string, unknown>;
     const unknown = Object.keys(source).filter((key) => !(key in defaults));
     if (unknown.length) throw new Error(`Unknown ${name} keys: ${unknown.join(", ")}`);
     const result = { ...defaults } as Record<string, boolean>;
     for (const key of Object.keys(defaults)) {
-      if (source[key] !== undefined && typeof source[key] !== "boolean") throw new Error(`${name}.${key} must be boolean.`);
+      if (source[key] !== undefined && typeof source[key] !== "boolean")
+        throw new Error(`${name}.${key} must be boolean.`);
       if (typeof source[key] === "boolean") result[key] = source[key];
     }
     return result as T;
@@ -268,7 +340,8 @@ export function validateConfig(input: unknown): SpecterConfig {
   const limitsRaw = value.limits;
   let limits = defaultConfig.limits;
   if (limitsRaw !== undefined) {
-    if (limitsRaw === null || typeof limitsRaw !== "object" || Array.isArray(limitsRaw)) throw new Error("limits must be an object.");
+    if (limitsRaw === null || typeof limitsRaw !== "object" || Array.isArray(limitsRaw))
+      throw new Error("limits must be an object.");
     const source = limitsRaw as Record<string, unknown>;
     const unknown = Object.keys(source).filter((key) => !(key in defaultConfig.limits));
     if (unknown.length) throw new Error(`Unknown limits keys: ${unknown.join(", ")}`);
@@ -276,7 +349,8 @@ export function validateConfig(input: unknown): SpecterConfig {
     for (const key of Object.keys(defaultConfig.limits) as (keyof typeof defaultConfig.limits)[]) {
       const item = source[key];
       if (item === undefined) continue;
-      if (typeof item !== "number" || !Number.isFinite(item) || item <= 0) throw new Error(`limits.${key} must be a positive number.`);
+      if (typeof item !== "number" || !Number.isFinite(item) || item <= 0)
+        throw new Error(`limits.${key} must be a positive number.`);
       mutable[key] = Math.floor(item);
     }
     limits = mutable;

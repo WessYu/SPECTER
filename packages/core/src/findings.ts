@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { SPECTER_SCHEMA_VERSION, type Finding, type FindingLocation, type RuleMetadata } from "@specter/types";
+import {
+  SPECTER_SCHEMA_VERSION,
+  type Finding,
+  type FindingLocation,
+  type RuleMetadata,
+} from "@specter/types";
 import { createFingerprint } from "./fingerprint.js";
 
 export interface CreateFindingInput {
@@ -39,7 +44,9 @@ export function createFinding(input: CreateFindingInput): Finding {
     ...(input.location ? { location: input.location } : {}),
     ...(input.evidence !== undefined ? { evidence: input.evidence } : {}),
     remediation: input.remediation ?? input.metadata.remediation,
-    ...(input.metadata.documentationUrl ? { documentationUrl: input.metadata.documentationUrl } : {}),
+    ...(input.metadata.documentationUrl
+      ? { documentationUrl: input.metadata.documentationUrl }
+      : {}),
     status: "open",
   };
 }

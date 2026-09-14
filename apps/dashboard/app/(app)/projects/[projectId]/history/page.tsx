@@ -5,18 +5,196 @@ import { formatDate, shortId } from "../../../../../lib/format";
 import { Severity } from "../../../../../components/severity";
 import { ProjectTabs } from "../../../../../components/project-tabs";
 
-export default async function HistoryPage({params,searchParams}:{readonly params:Promise<{readonly projectId:string}>;readonly searchParams:Promise<{readonly previous?:string;readonly current?:string}>}){
-  const {projectId}=await params;const query=await searchParams;const history=await apiFetch<HistoryResponse>(`/api/v1/projects/${encodeURIComponent(projectId)}/history`);
-  const latest=history.scans.at(-1);const prior=history.scans.at(-2);
-  const previous=query.previous??prior?.id;const current=query.current??latest?.id;
-  const diff=previous&&current&&previous!==current?await apiFetch<ScanDiffResponse>(`/api/v1/projects/${encodeURIComponent(projectId)}/compare?previous=${encodeURIComponent(previous)}&current=${encodeURIComponent(current)}`):undefined;
-  return <><div className="page-head"><div><div className="eyebrow">Security regression</div><h1>History</h1></div></div><ProjectTabs projectId={projectId}/>
-    {history.scans.length===0?<section className="empty"><h2>No scan history</h2><p className="subtle">At least two persisted scans are needed to explain a security regression.</p></section>:<>
-      <section className="timeline" aria-label="Security score history">{history.scans.map(scan=><Link key={scan.id} className="timeline-row" href={`/projects/${projectId}/scans/${scan.id}`}><time>{formatDate(scan.completedAt)}</time><span className="mono">{shortId(scan.id)}</span><strong className="mono">{Math.round(scan.score)}</strong><i style={{width:`${Math.max(2,Math.min(100,scan.score))}%`}}/></Link>)}</section>
-      {history.scans.length>=2?<form className="filter-bar section" method="get"><label><span className="eyebrow" style={{display:"block",marginBottom:6}}>Previous</span><select className="select mono" name="previous" defaultValue={previous}>{history.scans.map(scan=><option key={scan.id} value={scan.id}>{formatDate(scan.completedAt)} · {Math.round(scan.score)}</option>)}</select></label><label><span className="eyebrow" style={{display:"block",marginBottom:6}}>Current</span><select className="select mono" name="current" defaultValue={current}>{history.scans.map(scan=><option key={scan.id} value={scan.id}>{formatDate(scan.completedAt)} · {Math.round(scan.score)}</option>)}</select></label><button className="button" type="submit">Compare</button></form>:null}
-    </>}
-    {diff?<><section className="score-line"><div><div className="eyebrow">Regression delta</div><div className="score-value">{Math.round(diff.score.current)}<span className="score-denominator">/100</span></div></div><div className="score-meta"><span>{Math.round(diff.score.previous)} → {Math.round(diff.score.current)}</span><strong className={diff.score.delta<0?"delta-negative":diff.score.delta>0?"delta-positive":""}>{diff.score.delta>0?"+":""}{diff.score.delta}</strong><span>{diff.new.length} new · {diff.resolved.length} resolved</span></div></section>
-      <section className="section"><div className="section-head"><h2>Why it changed</h2><span className="eyebrow">Fingerprint diff</span></div><div className="diff-grid"><DiffList title="New" items={diff.new} mode="+" projectId={projectId}/><DiffList title="Resolved" items={diff.resolved} mode="−" projectId={projectId}/><div className="diff-column"><h3>Severity changed</h3>{diff.severityChanged.length?diff.severityChanged.map(change=><Link key={change.fingerprint} href={`/projects/${projectId}/findings/${change.finding.id}`} className="diff-item"><span className="mono">~</span><span>{change.finding.title}<small>{change.previous} → {change.current}</small></span></Link>):<p className="subtle">None</p>}</div></div></section></>:history.scans.length>=2?<p className="subtle">Choose two distinct scans to compare.</p>:null}
-  </>;
+export default async function HistoryPage({
+  params,
+  searchParams,
+}: {
+  readonly params: Promise<{ readonly projectId: string }>;
+  readonly searchParams: Promise<{ readonly previous?: string; readonly current?: string }>;
+}) {
+  const { projectId } = await params;
+  const query = await searchParams;
+  const history = await apiFetch<HistoryResponse>(
+    `/api/v1/projects/${encodeURIComponent(projectId)}/history`,
+  );
+  const latest = history.scans.at(-1);
+  const prior = history.scans.at(-2);
+  const previous = query.previous ?? prior?.id;
+  const current = query.current ?? latest?.id;
+  const diff =
+    previous && current && previous !== current
+      ? await apiFetch<ScanDiffResponse>(
+          `/api/v1/projects/${encodeURIComponent(projectId)}/compare?previous=${encodeURIComponent(previous)}&current=${encodeURIComponent(current)}`,
+        )
+      : undefined;
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Security regression</div>
+          <h1>History</h1>
+        </div>
+      </div>
+      <ProjectTabs projectId={projectId} />
+      {history.scans.length === 0 ? (
+        <section className="empty">
+          <h2>No scan history</h2>
+          <p className="subtle">
+            At least two persisted scans are needed to explain a security regression.
+          </p>
+        </section>
+      ) : (
+        <>
+          <section className="timeline" aria-label="Security score history">
+            {history.scans.map((scan) => (
+              <Link
+                key={scan.id}
+                className="timeline-row"
+                href={`/projects/${projectId}/scans/${scan.id}`}
+              >
+                <time>{formatDate(scan.completedAt)}</time>
+                <span className="mono">{shortId(scan.id)}</span>
+                <strong className="mono">{Math.round(scan.score)}</strong>
+                <i style={{ width: `${Math.max(2, Math.min(100, scan.score))}%` }} />
+              </Link>
+            ))}
+          </section>
+          {history.scans.length >= 2 ? (
+            <form className="filter-bar section" method="get">
+              <label>
+                <span className="eyebrow" style={{ display: "block", marginBottom: 6 }}>
+                  Previous
+                </span>
+                <select className="select mono" name="previous" defaultValue={previous}>
+                  {history.scans.map((scan) => (
+                    <option key={scan.id} value={scan.id}>
+                      {formatDate(scan.completedAt)} · {Math.round(scan.score)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span className="eyebrow" style={{ display: "block", marginBottom: 6 }}>
+                  Current
+                </span>
+                <select className="select mono" name="current" defaultValue={current}>
+                  {history.scans.map((scan) => (
+                    <option key={scan.id} value={scan.id}>
+                      {formatDate(scan.completedAt)} · {Math.round(scan.score)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button className="button" type="submit">
+                Compare
+              </button>
+            </form>
+          ) : null}
+        </>
+      )}
+      {diff ? (
+        <>
+          <section className="score-line">
+            <div>
+              <div className="eyebrow">Regression delta</div>
+              <div className="score-value">
+                {Math.round(diff.score.current)}
+                <span className="score-denominator">/100</span>
+              </div>
+            </div>
+            <div className="score-meta">
+              <span>
+                {Math.round(diff.score.previous)} → {Math.round(diff.score.current)}
+              </span>
+              <strong
+                className={
+                  diff.score.delta < 0
+                    ? "delta-negative"
+                    : diff.score.delta > 0
+                      ? "delta-positive"
+                      : ""
+                }
+              >
+                {diff.score.delta > 0 ? "+" : ""}
+                {diff.score.delta}
+              </strong>
+              <span>
+                {diff.new.length} new · {diff.resolved.length} resolved
+              </span>
+            </div>
+          </section>
+          <section className="section">
+            <div className="section-head">
+              <h2>Why it changed</h2>
+              <span className="eyebrow">Fingerprint diff</span>
+            </div>
+            <div className="diff-grid">
+              <DiffList title="New" items={diff.new} mode="+" projectId={projectId} />
+              <DiffList title="Resolved" items={diff.resolved} mode="−" projectId={projectId} />
+              <div className="diff-column">
+                <h3>Severity changed</h3>
+                {diff.severityChanged.length ? (
+                  diff.severityChanged.map((change) => (
+                    <Link
+                      key={change.fingerprint}
+                      href={`/projects/${projectId}/findings/${change.finding.id}`}
+                      className="diff-item"
+                    >
+                      <span className="mono">~</span>
+                      <span>
+                        {change.finding.title}
+                        <small>
+                          {change.previous} → {change.current}
+                        </small>
+                      </span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="subtle">None</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </>
+      ) : history.scans.length >= 2 ? (
+        <p className="subtle">Choose two distinct scans to compare.</p>
+      ) : null}
+    </>
+  );
 }
-function DiffList({title,items,mode,projectId}:{readonly title:string;readonly items:readonly ScanDiffResponse["new"][number][];readonly mode:string;readonly projectId:string}){return <div className="diff-column"><h3>{title}</h3>{items.length?items.map(item=><Link key={item.id} href={`/projects/${projectId}/findings/${item.id}`} className="diff-item"><span className="mono">{mode}</span><span>{item.title}<small><Severity value={item.severity}/> · {item.ruleId}</small></span></Link>):<p className="subtle">None</p>}</div>}
+function DiffList({
+  title,
+  items,
+  mode,
+  projectId,
+}: {
+  readonly title: string;
+  readonly items: readonly ScanDiffResponse["new"][number][];
+  readonly mode: string;
+  readonly projectId: string;
+}) {
+  return (
+    <div className="diff-column">
+      <h3>{title}</h3>
+      {items.length ? (
+        items.map((item) => (
+          <Link
+            key={item.id}
+            href={`/projects/${projectId}/findings/${item.id}`}
+            className="diff-item"
+          >
+            <span className="mono">{mode}</span>
+            <span>
+              {item.title}
+              <small>
+                <Severity value={item.severity} /> · {item.ruleId}
+              </small>
+            </span>
+          </Link>
+        ))
+      ) : (
+        <p className="subtle">None</p>
+      )}
+    </div>
+  );
+}

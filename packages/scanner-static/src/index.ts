@@ -10,7 +10,10 @@ export interface StaticScanResult {
   readonly unreadableFiles: readonly string[];
 }
 
-export async function scanSource(root: string, options: WalkOptions = {}): Promise<StaticScanResult> {
+export async function scanSource(
+  root: string,
+  options: WalkOptions = {},
+): Promise<StaticScanResult> {
   const walked = await walkSourceFiles(root, options);
   const findings = walked.files.flatMap((file) => [...analyzeSourceFile(file)]);
   return {

@@ -21,26 +21,64 @@ assert.equal(secureSource.findings.length, 0, "secure example must not produce s
 
 const vulnerableSource = await scanSource(vulnerable);
 const sourceRules = new Set(vulnerableSource.findings.map((finding) => finding.ruleId));
-for (const rule of ["SPECTER-SOURCE-001", "SPECTER-SOURCE-003", "SPECTER-SOURCE-005", "SPECTER-SOURCE-007"]) assert(sourceRules.has(rule), `vulnerable example must trigger ${rule}`);
+for (const rule of [
+  "SPECTER-SOURCE-001",
+  "SPECTER-SOURCE-003",
+  "SPECTER-SOURCE-005",
+  "SPECTER-SOURCE-007",
+])
+  assert(sourceRules.has(rule), `vulnerable example must trigger ${rule}`);
 
 const secrets = await scanSecrets(vulnerable);
 assert(secrets.findings.length >= 1, "vulnerable example must expose a synthetic secret");
-assert(!JSON.stringify(secrets.findings).includes("spt_test_Q7m9Z2x8N4v6K1r5T3w0"), "secret evidence must be redacted");
+assert(
+  !JSON.stringify(secrets.findings).includes("spt_test_Q7m9Z2x8N4v6K1r5T3w0"),
+  "secret evidence must be redacted",
+);
 
-const provider = new StaticAdvisoryProvider([{ id: "SPECTER-FIXTURE-LODASH", package: "lodash", affectedVersion: "4.17.20", severity: "high", summary: "Deterministic fixture advisory", patchedVersion: "4.17.21" }]);
+const provider = new StaticAdvisoryProvider([
+  {
+    id: "SPECTER-FIXTURE-LODASH",
+    package: "lodash",
+    affectedVersion: "4.17.20",
+    severity: "high",
+    summary: "Deterministic fixture advisory",
+    patchedVersion: "4.17.21",
+  },
+]);
 const dependency = await scanDependencies(vulnerable, provider);
-assert.equal(dependency.findings.length, 1, "vulnerable dependency fixture must produce one deterministic advisory");
+assert.equal(
+  dependency.findings.length,
+  1,
+  "vulnerable dependency fixture must produce one deterministic advisory",
+);
 assert.equal(dependency.findings[0]?.directDependency, true);
 
-const parsed = parseConfigSource('export default { failOn: "high", scan: { runtime: false }, suppressions: [{ ruleId: "R", reason: "accepted risk" }] };');
+const parsed = parseConfigSource(
+  'export default { failOn: "high", scan: { runtime: false }, suppressions: [{ ruleId: "R", reason: "accepted risk" }] };',
+);
 assert.equal(validateConfig(parsed).failOn, "high");
 assert.throws(() => parseConfigSource("export default { failOn: process.env.FAIL_ON };"));
 
-const redacted = redactEvidence({ authorization: "Bearer real-token", apiKey: "spt_test_Q7m9Z2x8N4v6K1r5T3w0" });
+const redacted = redactEvidence({
+  authorization: "Bearer real-token",
+  apiKey: "spt_test_Q7m9Z2x8N4v6K1r5T3w0",
+});
 assert.equal(redacted.authorization, "[REDACTED]");
 assert.equal(redacted.apiKey, "[REDACTED]");
 
-const finding = createFinding({ metadata: { id: "SMOKE-1", title: "Smoke", description: "Smoke", category: "source", defaultSeverity: "high", defaultConfidence: "high", remediation: "Fix" }, source: "static" });
+const finding = createFinding({
+  metadata: {
+    id: "SMOKE-1",
+    title: "Smoke",
+    description: "Smoke",
+    category: "source",
+    defaultSeverity: "high",
+    defaultConfidence: "high",
+    remediation: "Fix",
+  },
+  source: "static",
+});
 assert(calculateRiskScore([finding]).value < 100);
 
 const scan = {
@@ -59,10 +97,17 @@ const scan = {
 };
 assert.equal(JSON.parse(serializeSarif(scan)).version, "2.1.0");
 
-assert(analyzeTls("http://example.com", { applicable: false }).some((item) => item.ruleId === "SPECTER-TLS-006"));
+assert(
+  analyzeTls("http://example.com", { applicable: false }).some(
+    (item) => item.ruleId === "SPECTER-TLS-006",
+  ),
+);
 await assert.rejects(resolvePublicTarget("http://127.0.0.1"), /Blocked target/);
 
-const cli = await runCli({ cwd: root, args: ["scan", "examples/vulnerable-next", "--offline", "--no-build", "--json"] });
+const cli = await runCli({
+  cwd: root,
+  args: ["scan", "examples/vulnerable-next", "--offline", "--no-build", "--json"],
+});
 assert.equal(cli.exitCode, 0, cli.stderr);
 const cliReport = JSON.parse(cli.stdout ?? "{}");
 assert.equal(cliReport.schemaVersion, "1");
@@ -72,7 +117,10 @@ const temp = await mkdtemp(path.join(os.tmpdir(), "specter-smoke-"));
 try {
   await writeFile(path.join(temp, "package.json"), '{"name":"safe","version":"1.0.0"}');
   await writeFile(path.join(temp, "app.ts"), "export const value = 1;\n");
-  const safeCli = await runCli({ cwd: temp, args: ["scan", ".", "--offline", "--no-build", "--json"] });
+  const safeCli = await runCli({
+    cwd: temp,
+    args: ["scan", ".", "--offline", "--no-build", "--json"],
+  });
   assert.equal(safeCli.exitCode, 0, safeCli.stderr);
   const safeReport = JSON.parse(safeCli.stdout ?? "{}");
   assert.equal(safeReport.findings.length, 0, "minimal safe fixture should have no findings");
