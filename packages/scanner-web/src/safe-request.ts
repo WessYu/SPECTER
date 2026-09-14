@@ -10,6 +10,8 @@ export interface SafeRequestOptions {
   readonly userAgent?: string;
   readonly headers?: Readonly<Record<string, string>>;
   readonly signal?: AbortSignal;
+  /** Internal scanner mode: keep SSRF/DNS pinning but allow observing endpoints with invalid TLS. */
+  readonly allowInvalidTlsForInspection?: boolean;
 }
 
 export interface SafeResponse {
@@ -37,6 +39,7 @@ function once(target: Awaited<ReturnType<typeof resolvePublicTarget>>, options: 
       path: `${target.url.pathname}${target.url.search}`,
       method: "GET",
       servername: target.url.hostname,
+      ...(target.url.protocol === "https:" ? { rejectUnauthorized: options.allowInvalidTlsForInspection !== true } : {}),
       headers: { "user-agent": options.userAgent ?? "specter-security/0.1", accept: "text/html,application/xhtml+xml,application/json;q=0.8,*/*;q=0.5", ...options.headers },
       lookup: (_hostname, _lookupOptions, callback) => callback(null, target.address, target.family),
     }, (incoming) => {

@@ -15,7 +15,7 @@ export interface RemoteScanResult {
 }
 
 export async function scanRemote(target: string, options: SafeRequestOptions = {}): Promise<RemoteScanResult> {
-  const response = await safeGet(target, options);
+  const response = await safeGet(target, { ...options, allowInvalidTlsForInspection: true });
   const cookieAnalysis = analyzeCookies(response);
   const tls = await inspectTls(response.url, options.requestTimeoutMs ?? 10_000).catch((): TlsInspection => ({ applicable: response.url.startsWith("https:"), authorized: false }));
   const findings = [
