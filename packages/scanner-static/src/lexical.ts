@@ -36,7 +36,9 @@ export function tokenizeCode(source: string): readonly CodeToken[] {
     }
 
     if (char === "/" && source[index + 1] === "/") {
-      while (index < source.length) {\n        if (advance() === "\n") break;\n      }
+      while (index < source.length) {
+        if (advance() === "\n") break;
+      }
       continue;
     }
     if (char === "/" && source[index + 1] === "*") {
