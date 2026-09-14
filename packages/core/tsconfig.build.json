@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "paths": {
+      "@specter/types": [
+        "packages/types/dist/index.d.ts"
+      ]
+    },
+    "sourceMap": false,
+    "declarationMap": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "../../types/node-ambient.d.ts"
+  ]
+}

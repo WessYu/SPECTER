@@ -2,12 +2,19 @@
   "name": "@specter/reporter",
   "version": "0.1.0",
   "type": "module",
-  "dependencies": { "@specter/types": "workspace:*" },
-  "exports": { ".": "./dist/index.js" },
+  "dependencies": {
+    "@specter/types": "workspace:*"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "types": "./dist/index.d.ts",
-  "files": ["dist", "schemas"],
+  "files": [
+    "dist",
+    "schemas"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run"

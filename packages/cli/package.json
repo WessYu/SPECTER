@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "specter": "dist/packages/cli/src/bin.js"
+    "specter": "dist/bin.js"
   },
   "dependencies": {
     "@specter/config": "workspace:*",
@@ -22,7 +22,7 @@
     "README.md"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run"

@@ -10,3 +10,5 @@ coverage/
 .DS_Store
 .specter/
 *.tgz
+
+*.tsbuildinfo
