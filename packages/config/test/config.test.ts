@@ -3,7 +3,9 @@ import { parseConfigSource, validateConfig } from "../src/index.js";
 
 describe("configuration", () => {
   it("parses safe TypeScript-style object literals", () => {
-    const value = parseConfigSource(`export default { failOn: "critical", scan: { runtime: true }, suppressions: [{ ruleId: "R-1", reason: "accepted risk" }] };`);
+    const value = parseConfigSource(
+      `export default { failOn: "critical", scan: { runtime: true }, suppressions: [{ ruleId: "R-1", reason: "accepted risk" }] };`,
+    );
     const config = validateConfig(value);
     expect(config.failOn).toBe("critical");
     expect(config.scan.runtime).toBe(true);

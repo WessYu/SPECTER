@@ -4,15 +4,11 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
-      "@specter/types": [
-        "packages/types/dist/index.d.ts"
-      ]
+      "@specter/types": ["packages/types/dist/index.d.ts"]
     },
     "sourceMap": false,
     "declarationMap": false,
     "incremental": false
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

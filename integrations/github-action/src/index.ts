@@ -16,7 +16,16 @@ async function main(): Promise<void> {
   const baseline = input("baseline");
   const offline = input("offline", "false").toLowerCase() === "true";
 
-  const args = ["scan", target, "--ci", "--fail-on", failOn, "--max-score-drop", maxScoreDrop, "--json"];
+  const args = [
+    "scan",
+    target,
+    "--ci",
+    "--fail-on",
+    failOn,
+    "--max-score-drop",
+    maxScoreDrop,
+    "--json",
+  ];
   if (baseline) args.push("--baseline", baseline);
   if (offline) args.push("--offline");
 
@@ -27,7 +36,9 @@ async function main(): Promise<void> {
   const reportPath = `${process.cwd()}/.specter/report.json`;
   process.stdout.write(`::notice title=SPECTER report::${commandEscape(reportPath)}\n`);
   if (result.exitCode !== 0) {
-    process.stdout.write(`::error title=SPECTER security gate::SPECTER exited with code ${result.exitCode}. Review the report and findings.\n`);
+    process.stdout.write(
+      `::error title=SPECTER security gate::SPECTER exited with code ${result.exitCode}. Review the report and findings.\n`,
+    );
     process.exitCode = result.exitCode;
   }
 }

@@ -18,7 +18,6 @@ export interface RuleExecutionError {
   readonly message: string;
 }
 
-
 function sanitizeFinding(finding: Finding): Finding {
   if (finding.evidence === undefined) return finding;
   return { ...finding, evidence: redactEvidence(finding.evidence) };
@@ -47,7 +46,9 @@ export class RuleEngine {
         const result = await rule.evaluate(context);
         for (const raw of result) {
           const finding = sanitizeFinding(raw);
-          const suppression = options.suppressions?.find((item) => matchesSuppression(finding, item, now));
+          const suppression = options.suppressions?.find((item) =>
+            matchesSuppression(finding, item, now),
+          );
           if (suppression) suppressed.push({ ...finding, status: "suppressed" });
           else findings.push(finding);
         }

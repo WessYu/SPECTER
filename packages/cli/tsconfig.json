@@ -13,11 +13,9 @@
     "../scanner-static/src/**/*.ts",
     "../scanner-secrets/src/**/*.ts",
     "../scanner-dependencies/src/**/*.ts",
-    "../../types/node-ambient.d.ts",
     "../risk-engine/src/**/*.ts",
     "../reporter/src/**/*.ts",
     "../scanner-build/src/**/*.ts",
-    "../scanner-web/src/**/*.ts",
-    "../../types/playwright-ambient.d.ts"
+    "../scanner-web/src/**/*.ts"
   ]
 }

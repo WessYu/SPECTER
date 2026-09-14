@@ -17,7 +17,11 @@ const KNOWN_THIRD_PARTY = new Set([
 ]);
 
 function hostOf(input: string): string | undefined {
-  try { return new URL(input).hostname.toLowerCase(); } catch { return undefined; }
+  try {
+    return new URL(input).hostname.toLowerCase();
+  } catch {
+    return undefined;
+  }
 }
 
 function firstParty(candidate: string, root: string): boolean {
@@ -36,7 +40,9 @@ function extractHtmlLinks(html: string, base: URL): readonly string[] {
         url.hash = "";
         links.add(url.toString());
       }
-    } catch { /* malformed link */ }
+    } catch {
+      /* malformed link */
+    }
   }
   return [...links];
 }
@@ -44,14 +50,23 @@ function extractHtmlLinks(html: string, base: URL): readonly string[] {
 function extractSitemapLinks(xml: string): readonly string[] {
   const links: string[] = [];
   const pattern = /<loc>\s*([^<]+?)\s*<\/loc>/gi;
-  for (const match of xml.matchAll(pattern)) if (match[1]) links.push(match[1].replaceAll("&amp;", "&").trim());
+  for (const match of xml.matchAll(pattern))
+    if (match[1]) links.push(match[1].replaceAll("&amp;", "&").trim());
   return links;
 }
 
-function classifyDomain(domain: string, rootHost: string, previousDomains?: ReadonlySet<string>): ExternalDomain["classification"] {
+function classifyDomain(
+  domain: string,
+  rootHost: string,
+  previousDomains?: ReadonlySet<string>,
+): ExternalDomain["classification"] {
   if (firstParty(domain, rootHost)) return "first-party";
   if (previousDomains && !previousDomains.has(domain)) return "newly-introduced";
-  if (KNOWN_THIRD_PARTY.has(domain) || [...KNOWN_THIRD_PARTY].some((known) => domain.endsWith(`.${known}`))) return "known-third-party";
+  if (
+    KNOWN_THIRD_PARTY.has(domain) ||
+    [...KNOWN_THIRD_PARTY].some((known) => domain.endsWith(`.${known}`))
+  )
+    return "known-third-party";
   return "unknown";
 }
 
@@ -69,7 +84,10 @@ export interface SurfaceDiscoveryResult {
   readonly runtime?: RuntimeScanResult;
 }
 
-export async function discoverSurface(target: string, options: SurfaceDiscoveryOptions = {}): Promise<SurfaceDiscoveryResult> {
+export async function discoverSurface(
+  target: string,
+  options: SurfaceDiscoveryOptions = {},
+): Promise<SurfaceDiscoveryResult> {
   const initial = await resolvePublicTarget(target);
   const rootHost = initial.url.hostname.toLowerCase();
   const maxPages = Math.max(1, Math.min(options.maxPages ?? 20, 100));
@@ -78,11 +96,17 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
   const visited = new Set<string>();
   const routes = new Map<string, RouteInfo>();
   const domains = new Map<string, Set<string>>();
-  const runtime = options.includeRuntime === false ? undefined : await scanRuntime(initial.url.toString(), { navigationTimeoutMs: options.requestTimeoutMs ?? 20_000 }).catch(() => undefined);
+  const runtime =
+    options.includeRuntime === false
+      ? undefined
+      : await scanRuntime(initial.url.toString(), {
+          navigationTimeoutMs: options.requestTimeoutMs ?? 20_000,
+        }).catch(() => undefined);
 
   if (runtime) {
     for (const route of runtime.routes) routes.set(`${route.method} ${route.url}`, route);
-    for (const domain of runtime.externalDomains) domains.set(domain.domain, new Set(domain.resourceTypes));
+    for (const domain of runtime.externalDomains)
+      domains.set(domain.domain, new Set(domain.resourceTypes));
     for (const link of extractHtmlLinks(runtime.html, new URL(runtime.finalUrl))) {
       const host = hostOf(link);
       if (host && firstParty(host, rootHost) && queue.length < maxPages * 4) queue.push(link);
@@ -103,14 +127,20 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
         if (host && firstParty(host, rootHost) && queue.length < maxPages * 6) queue.push(link);
       }
     }
-  } catch { /* sitemap absence is not a finding */ }
+  } catch {
+    /* sitemap absence is not a finding */
+  }
 
   const takeCandidate = (): string | undefined => {
     while (queue.length > 0 && visited.size < maxPages) {
       const candidate = queue.shift();
       if (!candidate) continue;
       let parsed: URL;
-      try { parsed = new URL(candidate); } catch { continue; }
+      try {
+        parsed = new URL(candidate);
+      } catch {
+        continue;
+      }
       if (!firstParty(parsed.hostname.toLowerCase(), rootHost)) continue;
       parsed.hash = "";
       const normalized = parsed.toString();
@@ -130,9 +160,15 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
         const final = new URL(response.url);
         if (!firstParty(final.hostname.toLowerCase(), rootHost)) continue;
         const contentTypeRaw = response.headers["content-type"];
-        const contentType = typeof contentTypeRaw === "string" ? contentTypeRaw : contentTypeRaw ? [...contentTypeRaw].join(", ") : undefined;
+        const contentType =
+          typeof contentTypeRaw === "string"
+            ? contentTypeRaw
+            : contentTypeRaw
+              ? [...contentTypeRaw].join(", ")
+              : undefined;
         const corsRaw = response.headers["access-control-allow-origin"];
-        const cors = typeof corsRaw === "string" ? corsRaw : corsRaw ? [...corsRaw].join(", ") : undefined;
+        const cors =
+          typeof corsRaw === "string" ? corsRaw : corsRaw ? [...corsRaw].join(", ") : undefined;
         const route: RouteInfo = {
           url: `${final.pathname}${final.search}`,
           method: "GET",
@@ -145,7 +181,8 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
           for (const link of extractHtmlLinks(response.body, final)) {
             const host = hostOf(link);
             if (!host) continue;
-            if (firstParty(host, rootHost) && visited.size + queue.length < maxPages * 3) queue.push(link);
+            if (firstParty(host, rootHost) && visited.size + queue.length < maxPages * 3)
+              queue.push(link);
             else {
               const types = domains.get(host) ?? new Set<string>();
               types.add("document-link");
@@ -153,7 +190,9 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
             }
           }
         }
-      } catch { /* inaccessible observed route is skipped */ }
+      } catch {
+        /* inaccessible observed route is skipped */
+      }
     }
   };
 
@@ -169,10 +208,14 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
       page: initial.url.toString(),
     }));
   const current = new Set(externalDomains.map((item) => item.domain));
-  const removedDomains = options.previousDomains ? [...options.previousDomains].filter((domain) => !current.has(domain)).sort() : [];
+  const removedDomains = options.previousDomains
+    ? [...options.previousDomains].filter((domain) => !current.has(domain)).sort()
+    : [];
 
   return {
-    routes: [...routes.values()].sort((a, b) => a.url.localeCompare(b.url) || a.method.localeCompare(b.method)),
+    routes: [...routes.values()].sort(
+      (a, b) => a.url.localeCompare(b.url) || a.method.localeCompare(b.method),
+    ),
     externalDomains,
     removedDomains,
     ...(runtime ? { runtime } : {}),

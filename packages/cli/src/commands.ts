@@ -7,7 +7,14 @@ export interface CommandResult {
   readonly stderr?: string;
 }
 
-async function fileExists(file: string): Promise<boolean> { try { await access(file); return true; } catch { return false; } }
+async function fileExists(file: string): Promise<boolean> {
+  try {
+    await access(file);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function initConfig(root: string): Promise<CommandResult> {
   const file = path.join(path.resolve(root), "specter.config.ts");
@@ -23,6 +30,11 @@ export async function doctor(root: string): Promise<CommandResult> {
     ["package.json", await fileExists(path.join(path.resolve(root), "package.json"))],
   ] as const;
   const failed = checks.filter(([, passed]) => !passed);
-  const stdout = ["SPECTER DOCTOR", "", ...checks.map(([name, passed]) => `${passed ? "PASS" : "FAIL"}  ${name}`), ""].join("\n");
+  const stdout = [
+    "SPECTER DOCTOR",
+    "",
+    ...checks.map(([name, passed]) => `${passed ? "PASS" : "FAIL"}  ${name}`),
+    "",
+  ].join("\n");
   return { exitCode: failed.length ? 2 : 0, stdout };
 }

@@ -11,7 +11,7 @@
     "typescript": "^5.8.3"
   },
   "scripts": {
-    "build": "node ../../scripts/clean-dist.mjs && esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=dist/index.js",
+    "build": "node ../../scripts/clean-dist.mjs && esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --external:playwright --outfile=dist/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",
     "test": "vitest run --passWithNoTests"

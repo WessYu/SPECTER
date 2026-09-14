@@ -3,9 +3,15 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 const PREFIX_BYTES = 5;
 const SECRET_BYTES = 32;
 
-export interface GeneratedApiKey { readonly value: string; readonly prefix: string; readonly hash: string; }
+export interface GeneratedApiKey {
+  readonly value: string;
+  readonly prefix: string;
+  readonly hash: string;
+}
 
-export function hashApiKey(value: string): string { return createHash("sha256").update(value).digest("hex"); }
+export function hashApiKey(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 export function generateApiKey(): GeneratedApiKey {
   const prefix = randomBytes(PREFIX_BYTES).toString("hex");

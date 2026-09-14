@@ -1,1 +1,10 @@
-export default function Loading(){return <div aria-busy="true" aria-label="Loading SPECTER data"><div className="skeleton" style={{width:120,height:10}}/><div className="skeleton" style={{width:"42%",height:42,marginTop:14}}/><div className="skeleton" style={{height:1,marginTop:42}}/><div className="skeleton" style={{height:120,marginTop:24}}/></div>}
+export default function Loading() {
+  return (
+    <div aria-busy="true" aria-label="Loading SPECTER data">
+      <div className="skeleton" style={{ width: 120, height: 10 }} />
+      <div className="skeleton" style={{ width: "42%", height: 42, marginTop: 14 }} />
+      <div className="skeleton" style={{ height: 1, marginTop: 42 }} />
+      <div className="skeleton" style={{ height: 120, marginTop: 24 }} />
+    </div>
+  );
+}

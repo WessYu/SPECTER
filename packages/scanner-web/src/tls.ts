@@ -30,13 +30,18 @@ export async function inspectTls(input: string, timeoutMs = 10_000): Promise<Tls
     socket.once("error", (error) => reject(error));
     socket.once("secureConnect", () => {
       const certificate = socket.getPeerCertificate(true);
-      const identityError = certificate && Object.keys(certificate).length > 0
-        ? checkServerIdentity(hostname, certificate)
-        : new Error("Peer did not provide a certificate.");
+      const identityError =
+        certificate && Object.keys(certificate).length > 0
+          ? checkServerIdentity(hostname, certificate)
+          : new Error("Peer did not provide a certificate.");
       const validFromMs = certificate.valid_from ? Date.parse(certificate.valid_from) : Number.NaN;
       const validToMs = certificate.valid_to ? Date.parse(certificate.valid_to) : Number.NaN;
       const protocol = socket.getProtocol();
       const authorizationError = socket.authorizationError;
+      const issuerCommonName = certificate.issuer?.CN;
+      const issuer = Array.isArray(issuerCommonName)
+        ? issuerCommonName.join(", ")
+        : issuerCommonName;
       const result: TlsInspection = {
         applicable: true,
         authorized: socket.authorized,
@@ -44,9 +49,11 @@ export async function inspectTls(input: string, timeoutMs = 10_000): Promise<Tls
         ...(protocol ? { protocol } : {}),
         ...(Number.isFinite(validFromMs) ? { validFrom: new Date(validFromMs).toISOString() } : {}),
         ...(Number.isFinite(validToMs) ? { validTo: new Date(validToMs).toISOString() } : {}),
-        ...(Number.isFinite(validToMs) ? { daysUntilExpiry: Math.floor((validToMs - Date.now()) / 86_400_000) } : {}),
+        ...(Number.isFinite(validToMs)
+          ? { daysUntilExpiry: Math.floor((validToMs - Date.now()) / 86_400_000) }
+          : {}),
         hostnameValid: !identityError,
-        ...(certificate.issuer?.CN ? { issuer: certificate.issuer.CN } : {}),
+        ...(issuer ? { issuer } : {}),
       };
       socket.end();
       resolve(result);

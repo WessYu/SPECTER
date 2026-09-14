@@ -58,21 +58,48 @@ export interface PersistedScanRow {
 }
 
 const SEVERITIES = new Set<Severity>(["info", "low", "medium", "high", "critical"]);
-const CATEGORIES = new Set<FindingCategory>(["secret", "dependency", "source", "configuration", "headers", "cookies", "cors", "csp", "tls", "client-exposure", "third-party", "route", "runtime", "build"]);
+const CATEGORIES = new Set<FindingCategory>([
+  "secret",
+  "dependency",
+  "source",
+  "configuration",
+  "headers",
+  "cookies",
+  "cors",
+  "csp",
+  "tls",
+  "client-exposure",
+  "third-party",
+  "route",
+  "runtime",
+  "build",
+]);
 const CONFIDENCES = new Set<Confidence>(["low", "medium", "high"]);
 const SOURCES = new Set<FindingSource>(["static", "build", "dependency", "remote", "runtime"]);
 const STATUSES = new Set<FindingStatus>(["open", "resolved", "suppressed"]);
-const SCAN_STATUSES = new Set<ScanStatus>(["queued", "running", "completed", "failed", "cancelled"]);
+const SCAN_STATUSES = new Set<ScanStatus>([
+  "queued",
+  "running",
+  "completed",
+  "failed",
+  "cancelled",
+]);
 const TARGET_KINDS = new Set<ScanTargetKind>(["project", "build", "url"]);
 
 function member<T extends string>(value: string, allowed: ReadonlySet<T>, fallback: T): T {
-  return allowed.has(value as T) ? value as T : fallback;
+  return allowed.has(value as T) ? (value as T) : fallback;
 }
 function object(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value) ? value as Readonly<Record<string, unknown>> : undefined;
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Readonly<Record<string, unknown>>)
+    : undefined;
 }
-function number(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) ? value : undefined; }
-function string(value: unknown): string | undefined { return typeof value === "string" ? value : undefined; }
+function number(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+function string(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
 
 function hydrateSummary(value: unknown): SeveritySummary {
   const record = object(value);
@@ -92,16 +119,33 @@ function hydrateModules(value: unknown): readonly ScanModuleResult[] {
     const status = string(row?.status);
     const durationMs = number(row?.durationMs);
     const findingCount = number(row?.findingCount);
-    if (!name || !status || !["passed", "warning", "failed", "skipped"].includes(status) || durationMs === undefined || findingCount === undefined) return [];
+    if (
+      !name ||
+      !status ||
+      !["passed", "warning", "failed", "skipped"].includes(status) ||
+      durationMs === undefined ||
+      findingCount === undefined
+    )
+      return [];
     return [{ name, status: status as ScanModuleResult["status"], durationMs, findingCount }];
   });
 }
 function hydrateErrors(value: unknown): readonly ScanError[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
-    const row = object(item); const code = string(row?.code); const message = string(row?.message); const moduleName = string(row?.module);
+    const row = object(item);
+    const code = string(row?.code);
+    const message = string(row?.message);
+    const moduleName = string(row?.module);
     if (!code || !message) return [];
-    return [{ code, message, ...(moduleName ? { module: moduleName } : {}), recoverable: row?.recoverable === true }];
+    return [
+      {
+        code,
+        message,
+        ...(moduleName ? { module: moduleName } : {}),
+        recoverable: row?.recoverable === true,
+      },
+    ];
   });
 }
 
@@ -110,7 +154,9 @@ function hydrateFinding(occurrence: OccurrenceRow): Finding {
   const location = {
     ...(occurrence.file ? { file: occurrence.file } : {}),
     ...(occurrence.line !== null && occurrence.line !== undefined ? { line: occurrence.line } : {}),
-    ...(occurrence.column !== null && occurrence.column !== undefined ? { column: occurrence.column } : {}),
+    ...(occurrence.column !== null && occurrence.column !== undefined
+      ? { column: occurrence.column }
+      : {}),
     ...(occurrence.url ? { url: occurrence.url } : {}),
   };
   return {
@@ -125,7 +171,9 @@ function hydrateFinding(occurrence: OccurrenceRow): Finding {
     source: member(row.source, SOURCES, "static"),
     fingerprint: row.fingerprint,
     ...(Object.keys(location).length ? { location } : {}),
-    ...(occurrence.evidenceJson !== undefined && occurrence.evidenceJson !== null ? { evidence: occurrence.evidenceJson } : {}),
+    ...(occurrence.evidenceJson !== undefined && occurrence.evidenceJson !== null
+      ? { evidence: occurrence.evidenceJson }
+      : {}),
     ...(row.remediation ? { remediation: row.remediation } : {}),
     ...(row.documentationUrl ? { documentationUrl: row.documentationUrl } : {}),
     ...(row.status ? { status: member(row.status, STATUSES, "open") } : {}),
@@ -143,7 +191,8 @@ function riskBand(score: number): ScanResult["score"]["band"] {
 }
 
 export function hydratePersistedScan(row: PersistedScanRow): ScanResult {
-  if (row.schemaVersion !== "1") throw new Error(`Unsupported persisted scan schema: ${row.schemaVersion}`);
+  if (row.schemaVersion !== "1")
+    throw new Error(`Unsupported persisted scan schema: ${row.schemaVersion}`);
   const score = Math.max(0, Math.min(100, Number.isFinite(row.score) ? row.score : 0));
   const surface = hydrateSurface(row.surfaceJson);
   return {
@@ -163,42 +212,64 @@ export function hydratePersistedScan(row: PersistedScanRow): ScanResult {
   };
 }
 
-export interface HydratedSurface { readonly routes: readonly RouteInfo[]; readonly externalDomains: readonly ExternalDomain[]; readonly removedDomains?: readonly string[]; }
+export interface HydratedSurface {
+  readonly routes: readonly RouteInfo[];
+  readonly externalDomains: readonly ExternalDomain[];
+  readonly removedDomains?: readonly string[];
+}
 export function hydrateSurface(value: unknown): HydratedSurface | undefined {
   const root = object(value);
   if (!root) return undefined;
   const routes: RouteInfo[] = [];
-  if (Array.isArray(root.routes)) for (const item of root.routes) {
-    const row = object(item); const url = string(row?.url); const method = string(row?.method);
-    if (!url || !method) continue;
-    const status = number(row?.status);
-    const contentType = string(row?.contentType);
-    const cors = string(row?.cors);
-    routes.push({
-      url, method,
-      ...(status !== undefined ? { status } : {}),
-      ...(contentType ? { contentType } : {}),
-      ...(typeof row?.authenticationObservable === "boolean" ? { authenticationObservable: row.authenticationObservable } : {}),
-      ...(cors ? { cors } : {}),
-    });
-  }
+  if (Array.isArray(root.routes))
+    for (const item of root.routes) {
+      const row = object(item);
+      const url = string(row?.url);
+      const method = string(row?.method);
+      if (!url || !method) continue;
+      const status = number(row?.status);
+      const contentType = string(row?.contentType);
+      const cors = string(row?.cors);
+      routes.push({
+        url,
+        method,
+        ...(status !== undefined ? { status } : {}),
+        ...(contentType ? { contentType } : {}),
+        ...(typeof row?.authenticationObservable === "boolean"
+          ? { authenticationObservable: row.authenticationObservable }
+          : {}),
+        ...(cors ? { cors } : {}),
+      });
+    }
   const externalDomains: ExternalDomain[] = [];
-  if (Array.isArray(root.externalDomains)) for (const item of root.externalDomains) {
-    const row = object(item); const domain = string(row?.domain); const classification = string(row?.classification);
-    if (!domain) continue;
-    const allowed = new Set<ExternalDomain["classification"]>(["first-party", "known-third-party", "unknown", "newly-introduced"]);
-    const firstOccurrence = string(row?.firstOccurrence);
-    const page = string(row?.page);
-    const relatedScript = string(row?.relatedScript);
-    externalDomains.push({
-      domain,
-      classification: member(classification ?? "unknown", allowed, "unknown"),
-      resourceTypes: Array.isArray(row?.resourceTypes) ? row.resourceTypes.filter((entry): entry is string => typeof entry === "string") : [],
-      ...(firstOccurrence ? { firstOccurrence } : {}),
-      ...(page ? { page } : {}),
-      ...(relatedScript ? { relatedScript } : {}),
-    });
-  }
-  const removedDomains = Array.isArray(root.removedDomains) ? root.removedDomains.filter((entry): entry is string => typeof entry === "string") : undefined;
+  if (Array.isArray(root.externalDomains))
+    for (const item of root.externalDomains) {
+      const row = object(item);
+      const domain = string(row?.domain);
+      const classification = string(row?.classification);
+      if (!domain) continue;
+      const allowed = new Set<ExternalDomain["classification"]>([
+        "first-party",
+        "known-third-party",
+        "unknown",
+        "newly-introduced",
+      ]);
+      const firstOccurrence = string(row?.firstOccurrence);
+      const page = string(row?.page);
+      const relatedScript = string(row?.relatedScript);
+      externalDomains.push({
+        domain,
+        classification: member(classification ?? "unknown", allowed, "unknown"),
+        resourceTypes: Array.isArray(row?.resourceTypes)
+          ? row.resourceTypes.filter((entry): entry is string => typeof entry === "string")
+          : [],
+        ...(firstOccurrence ? { firstOccurrence } : {}),
+        ...(page ? { page } : {}),
+        ...(relatedScript ? { relatedScript } : {}),
+      });
+    }
+  const removedDomains = Array.isArray(root.removedDomains)
+    ? root.removedDomains.filter((entry): entry is string => typeof entry === "string")
+    : undefined;
   return { routes, externalDomains, ...(removedDomains ? { removedDomains } : {}) };
 }

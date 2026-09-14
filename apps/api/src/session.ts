@@ -37,8 +37,11 @@ export function parseCookieHeader(raw: string | string[] | undefined): ReadonlyM
     const name = part.slice(0, separator).trim();
     const cookieValue = part.slice(separator + 1).trim();
     if (!name) continue;
-    try { cookies.set(name, decodeURIComponent(cookieValue)); }
-    catch { /* malformed cookie is ignored */ }
+    try {
+      cookies.set(name, decodeURIComponent(cookieValue));
+    } catch {
+      /* malformed cookie is ignored */
+    }
   }
   return cookies;
 }
@@ -49,7 +52,12 @@ function validatedCookieDomain(): string | undefined {
   return /^\.?[A-Za-z0-9.-]+$/.test(value) && !value.includes("..") ? value : undefined;
 }
 
-export function serializeCookie(name: string, value: string, maxAgeSeconds: number, path = "/"): string {
+export function serializeCookie(
+  name: string,
+  value: string,
+  maxAgeSeconds: number,
+  path = "/",
+): string {
   const domain = validatedCookieDomain();
   const attributes = [
     `${name}=${encodeURIComponent(value)}`,

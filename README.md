@@ -69,12 +69,12 @@ pnpm specter scan . --baseline previous.json --ci --fail-on high --max-score-dro
 
 Exit codes:
 
-| Code | Meaning |
-| ---: | --- |
-| `0` | scan/gate succeeded |
-| `1` | security gate failed |
-| `2` | command/configuration error |
-| `3` | scan/runtime failure |
+| Code | Meaning                     |
+| ---: | --------------------------- |
+|  `0` | scan/gate succeeded         |
+|  `1` | security gate failed        |
+|  `2` | command/configuration error |
+|  `3` | scan/runtime failure        |
 
 ## Configuration
 

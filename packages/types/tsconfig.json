@@ -5,7 +5,5 @@
     "outDir": "dist",
     "incremental": false
   },
-  "include": [
-    "src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }
