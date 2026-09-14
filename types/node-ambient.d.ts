@@ -102,3 +102,13 @@ declare module "node:child_process" {
 }
 declare function setTimeout(listener: () => void, ms: number): unknown;
 declare function clearTimeout(handle: unknown): void;
+declare module "node:crypto" {
+  export function createHash(algorithm: string): { update(data: string): { digest(encoding: "hex"): string } };
+  export function randomUUID(): string;
+  export function randomBytes(size: number): { toString(encoding: "hex" | "base64url"): string };
+  export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean;
+}
+declare module "node:dns/promises" {
+  export function lookup(hostname: string, options: { all: true; verbatim: true }): Promise<Array<{ address: string; family: 4 | 6 }>>;
+  export function resolveTxt(hostname: string): Promise<string[][]>;
+}
