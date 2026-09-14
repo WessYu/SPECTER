@@ -37,11 +37,6 @@ interface MembershipRow {
   readonly role: OrganizationRole;
   readonly organization: { readonly id: string; readonly name: string; readonly slug: string };
 }
-interface SessionRow {
-  readonly id: string;
-  readonly userId: string;
-  readonly organizationId: string;
-}
 interface OrgParams {
   readonly id: string;
 }
