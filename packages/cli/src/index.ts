@@ -9,6 +9,47 @@ export interface CliIo {
   readonly args: readonly string[];
 }
 
+function renderHelp(): string {
+  const ghost = [
+    '       .-""""-.',
+    "      /        \\",
+    "     /  o    o  \\",
+    "    |     __     |",
+    "    |    (__)    |",
+    "     \\          /",
+    "      \\   /\\   /",
+    "       \\_/  \\_/",
+  ];
+
+  const help = [
+    `SPECTER v${CLI_VERSION}`,
+    "Application security from source to production.",
+    "",
+    "COMMANDS",
+    "specter scan [path|url]          scan source, build or a published app",
+    "specter compare <old> <new>      compare two SPECTER reports",
+    "specter doctor                   check the local environment",
+    "specter init                     create specter.config.ts",
+    "specter config                   print the resolved configuration",
+    "specter version                  print the CLI version",
+    "specter help                     show this screen",
+    "",
+    "COMMON FLAGS",
+    "--json  --sarif  --ci  --baseline <report>  --output <path>",
+  ];
+
+  const width = Math.max(...ghost.map((line) => line.length));
+  const rows = Math.max(ghost.length, help.length);
+
+  return (
+    Array.from({ length: rows }, (_, index) => {
+      const left = ghost[index] ?? "";
+      const right = help[index] ?? "";
+      return `${left.padEnd(width)}    ${right}`.trimEnd();
+    }).join("\\n") + "\\n"
+  );
+}
+
 export async function runCli(io: CliIo): Promise<CommandResult> {
   const [command = "help", ...rest] = io.args;
   if (command === "scan") return runScanCommand(rest, io.cwd);
@@ -20,37 +61,24 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
       const loaded = await loadConfig(io.cwd);
       return {
         exitCode: 0,
-        stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\n`,
+        stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\\n`,
       };
     } catch (error: unknown) {
       return {
         exitCode: 2,
-        stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n`,
+        stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\\n`,
       };
     }
   }
   if (command === "version" || command === "--version" || command === "-v")
-    return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
+    return { exitCode: 0, stdout: `${CLI_VERSION}\\n` };
   if (command === "help" || command === "--help" || command === "-h") {
     return {
       exitCode: 0,
-      stdout: [
-        "SPECTER",
-        "Application security from source to production.",
-        "",
-        "Usage:",
-        "  specter scan [path|url] [--json|--sarif] [--ci] [--fail-on high] [--max-score-drop 5]",
-        "  specter scan [target] --baseline <report.json> [--output <path>]",
-        "  specter compare <previous.json> <current.json>",
-        "  specter doctor",
-        "  specter init",
-        "  specter config",
-        "  specter version",
-        "",
-      ].join("\n"),
+      stdout: renderHelp(),
     };
   }
-  return { exitCode: 2, stderr: `Unknown command: ${command}\n` };
+  return { exitCode: 2, stderr: `Unknown command: ${command}\\n` };
 }
 
 export * from "./commands.js";
