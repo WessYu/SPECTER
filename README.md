@@ -1,91 +1,257 @@
+<div align="center">
+
 # SPECTER
 
-**Application security from source to production.**
+### Application security from source to production.
 
-SPECTER is a defensive application-security platform for JavaScript/TypeScript projects. It scans source code, generated build artifacts and published HTTP(S) applications, then compares scans so teams can see **what became less secure, where it changed, and when the regression appeared**.
+**Detect security regressions before they ship.**
 
-The core design goal is security regression detection rather than maximizing raw finding counts.
+Defensive AppSec for JavaScript and TypeScript projects: source, secrets, dependencies,
+builds, deployed applications, baselines and CI gates.
 
-## What is implemented
+[![CI](https://github.com/WessYu/SPECTER/actions/workflows/ci.yml/badge.svg)](https://github.com/WessYu/SPECTER/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
 
-- local JS/TS source scanning with deterministic rule IDs and stable fingerprints;
-- secret detection with centralized evidence redaction;
-- dependency inventory for npm, pnpm and Yarn plus a provider interface and OSV provider;
-- generated-build inspection without automatically executing untrusted build scripts;
-- passive remote scanning for TLS, security headers, cookies, CSP and CORS;
-- SSRF-hardened HTTP requests with DNS resolution checks, IP blocking, redirect revalidation, response limits and timeouts;
-- optional defensive Playwright runtime observation;
-- observed route and third-party-domain discovery without directory brute forcing;
-- 0–100 risk scoring with documented weights and diminishing aggregation;
-- JSON and SARIF 2.1.0 reports;
-- scan comparison, baselines and CI security gates;
-- GitHub Action source integration;
-- PostgreSQL/Prisma persistence, GitHub OAuth sessions, hashed CI API keys and tenant-scoped API access;
-- a Next.js security console for projects, scans, findings, history, regression diffs, attack surface and domain trust;
-- deterministic vulnerable/safe fixtures and an offline smoke-validation workflow.
+</div>
 
-SPECTER does **not** prove that an application is secure and is not an exploitation framework. See [Security model](docs/security-model.md).
+```text
+             .-─────────-.
+          .-'             '-.
+        .'       ╭───╮       '.
+       /        ╱     ╲        \
+      /        │  ◢ ◣  │        \
+     │         │   ▾   │         │
+     │         ╲  ───  ╱         │
+      \         '───'         /
+       '.       ╱│   │╲       .'
+         '-._  ╱ │   │ ╲  _.-'
+             '╲  │   │  ╱'
+               ╲│   │╱
+                ╲   ╱
+                 ╲ ╱
+                  ╵
+
+┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓
+┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛
+┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸
+```
+
+## Security changes. Not noise.
+
+Most scanners answer one question: **what looks wrong right now?**
+
+SPECTER is built around another one:
+
+> **What became less secure since the last known-good state?**
+
+It produces stable findings, compares scans, tracks score changes and can stop a CI run when a
+new regression crosses policy.
+
+```text
+SOURCE  ──▶  BUILD  ──▶  PREVIEW  ──▶  PRODUCTION  ──▶  MONITOR
+  │           │            │               │               │
+  └─ code     └─ output     └─ runtime      └─ HTTP/TLS      └─ baseline
+     secrets     artifacts     behavior        headers          diff
+     deps                                      cookies          gate
+                                               CSP/CORS
+```
+
+## The demo
+
+The repository ships with deliberately vulnerable and safe fixtures so the difference is visible
+without inventing sample output.
+
+### Vulnerable fixture
+
+```bash
+pnpm specter scan examples/vulnerable-next --ci --fail-on high
+```
+
+Observed result with the current fixture:
+
+```text
+Security Score
+0/100
+
+HIGH         3
+
+Security gate failed:
+- SPECTER-SOURCE-001  Dynamic code execution with eval
+- SPECTER-SOURCE-007  Private variable exposed to client-facing code
+- SPECTER-SECRET-001  Potential exposed secret
+
+❌ CI BLOCKED
+```
+
+### Safe fixture
+
+```bash
+pnpm specter scan examples/secure-next --ci --fail-on medium
+```
+
+```text
+Security Score
+100/100
+
+CRITICAL     0
+HIGH         0
+MEDIUM       0
+LOW          0
+INFO         0
+
+0 findings require review.
+
+✅ CI PASSED
+```
+
+Dependency advisory counts come from the configured provider and can change as upstream databases
+are updated. The repository smoke suite uses deterministic fixtures for repeatable validation.
 
 ## Quick start
 
 Requirements:
 
-- Node.js 20.11 or later;
+- Node.js 20.11 or newer;
 - pnpm 10.x.
 
 ```bash
+git clone https://github.com/WessYu/SPECTER.git
+cd SPECTER
+
 pnpm install
 pnpm build
-pnpm test
 pnpm smoke
 ```
 
-After building, scan a local project:
+Then inspect the CLI:
+
+```bash
+pnpm specter help
+```
+
+Scan a local project:
+
+```bash
+pnpm specter scan .
+```
+
+Run a deterministic offline scan:
 
 ```bash
 pnpm specter scan examples/vulnerable-next --offline --no-build
 ```
 
-Or scan a published application passively:
+Passively inspect a published application:
 
 ```bash
 pnpm specter scan https://example.com
 ```
 
-Machine-readable reports:
+Machine-readable output:
 
 ```bash
 pnpm specter scan . --json
 pnpm specter scan . --sarif
 ```
 
-The CLI always writes a report under `.specter/` unless `--output` is provided.
+SPECTER writes its report under `.specter/` unless `--output` is provided.
 
-## Security regression gate
+## What SPECTER covers
+
+| Surface | What it does |
+| --- | --- |
+| **Source** | Detects risky JS/TS patterns with stable rule IDs and fingerprints |
+| **Secrets** | Finds credential-like material and redacts evidence before reporting |
+| **Dependencies** | Inventories npm, pnpm and Yarn dependencies with pluggable advisory providers |
+| **Build output** | Inspects generated artifacts without automatically executing untrusted build scripts |
+| **Remote** | Passively checks TLS, security headers, cookies, CSP and CORS |
+| **Attack surface** | Records observed routes and third-party domains without directory brute forcing |
+| **Runtime** | Supports opt-in defensive Playwright observation |
+| **Regression** | Compares scans, baselines, severities and score drops |
+| **Reporting** | Emits versioned JSON and SARIF 2.1.0 |
+| **Platform** | Persists projects, scans and findings through PostgreSQL/Prisma and exposes them in a Next.js console |
+
+## CI is a security gate
+
+A scan can be used as policy, not just as a report.
 
 ```bash
-pnpm specter scan . --baseline previous.json --ci --fail-on high --max-score-drop 5
+pnpm specter scan . \
+  --baseline previous.json \
+  --ci \
+  --fail-on high \
+  --max-score-drop 5
 ```
 
-Exit codes:
+SPECTER can fail the gate when:
 
-| Code | Meaning                     |
-| ---: | --------------------------- |
-|  `0` | scan/gate succeeded         |
-|  `1` | security gate failed        |
-|  `2` | command/configuration error |
-|  `3` | scan/runtime failure        |
+- a new finding reaches or exceeds the configured severity;
+- an existing finding increases in severity across the threshold;
+- the security score drops beyond policy.
+
+| Exit code | Meaning |
+| ---: | --- |
+| `0` | scan and gate succeeded |
+| `1` | security gate failed |
+| `2` | command or configuration error |
+| `3` | scan or runtime failure |
+
+The repository also contains a bundled GitHub Action under
+`integrations/github-action/dist/index.js`.
+
+## One finding model
+
+SPECTER keeps the same finding model across local scans, CI, JSON, SARIF, API persistence and the
+dashboard.
+
+A finding carries enough context to answer:
+
+```text
+What happened?
+Where did it happen?
+How severe is it?
+How confident are we?
+What changed?
+Is it new?
+Was it suppressed?
+How do we fix it?
+```
+
+That shared model is what makes regression comparison useful instead of reducing security to a
+collection of unrelated scanner outputs.
+
+## CLI
+
+```text
+specter scan [path|url]        scan source, build or a published app
+specter compare <old> <new>    compare two SPECTER reports
+specter doctor                 check the local environment
+specter init                   create specter.config.ts
+specter config                 print the resolved configuration
+specter version                print the CLI version
+specter help                   show the command screen
+```
+
+Common flags:
+
+```text
+--json
+--sarif
+--ci
+--baseline <report>
+--output <path>
+```
 
 ## Configuration
 
-Run:
+Create and inspect configuration with:
 
 ```bash
 pnpm specter init
 pnpm specter config
 ```
 
-Example `specter.config.ts`:
+Example:
 
 ```ts
 export default {
@@ -118,47 +284,82 @@ export default {
 };
 ```
 
-The config loader intentionally accepts only literal data. It does not execute arbitrary TypeScript/JavaScript from configuration files.
+The config loader accepts literal data only. It does not execute arbitrary JavaScript or TypeScript
+from configuration files.
 
-## Repository structure
+## Dashboard and API
+
+SPECTER is more than the CLI.
+
+The API uses Fastify, PostgreSQL and versioned Prisma migrations. Browser authentication is backed
+by GitHub OAuth sessions, CI access uses organization-scoped API keys, and stored API keys are
+hashed.
+
+The Next.js console exposes:
+
+- projects and scans;
+- findings and finding history;
+- regression diffs;
+- attack surface;
+- observed domains and trust state;
+- project-level security history.
+
+The dashboard reads the authenticated API. It does not rely on fake project or finding data.
+
+## Repository map
 
 ```text
 apps/
-  api/                 Fastify + Prisma API
-  dashboard/           Next.js security console
+  api/                    Fastify + Prisma API
+  dashboard/              Next.js security console
+
 packages/
-  cli/                 CLI orchestration
-  config/              strict configuration parser
-  core/                findings, fingerprints, redaction, regression, gates
-  reporter/            JSON + SARIF
-  risk-engine/         documented 0–100 score
-  scanner-static/      source rules
-  scanner-secrets/     credential detection
-  scanner-dependencies dependency inventory/advisories
-  scanner-build/       generated artifact inspection
-  scanner-web/         remote/runtime/surface scanning
-  types/               versioned public domain types
+  cli/                    CLI orchestration
+  config/                 strict configuration parser
+  core/                   findings, fingerprints, redaction, regression, gates
+  reporter/               JSON + SARIF
+  risk-engine/            0–100 security score
+  scanner-static/         source rules
+  scanner-secrets/        credential detection
+  scanner-dependencies/   inventory + advisory providers
+  scanner-build/          generated artifact inspection
+  scanner-web/            remote, runtime and surface scanning
+  types/                  versioned public domain types
+
 integrations/
   github-action/
+
 examples/
   vulnerable-next/
   secure-next/
   vulnerable-react/
   secure-react/
+
 docs/
 ```
 
-## API and dashboard
+## Defensive by design
 
-The API uses PostgreSQL and versioned Prisma migrations. Authentication supports GitHub OAuth-backed browser sessions and organization-scoped API keys. API keys are stored as hashes; the full key is returned only at creation.
+SPECTER is built for defensive application-security work on systems you own or are authorized to
+test.
 
-See [Getting started](docs/getting-started.md), [Architecture](docs/architecture.md), and [Configuration](docs/configuration.md) for local setup.
+It does not implement exploitation, brute forcing, credential attacks, authentication bypass,
+WAF evasion, persistence, lateral movement, exfiltration or automated RCE/CVE exploitation.
+
+Remote scanning is intentionally low impact. HTTP requests are protected by DNS resolution checks,
+private/reserved IP blocking, redirect revalidation, response limits and timeouts.
+
+SPECTER does **not** prove that an application is secure. It reports evidence and regressions within
+the scanners that were actually run.
+
+Read the full [security model](docs/security-model.md) before using remote or runtime scanning.
 
 ## Validation
 
-The repository includes:
+The repository is continuously checked with:
 
 ```bash
+pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -166,30 +367,36 @@ pnpm build
 pnpm smoke
 ```
 
-`pnpm smoke` is intentionally network-independent. It verifies safe/vulnerable source fixtures, secret redaction, dependency-provider behavior, config parsing, SARIF output, SSRF blocking and the local CLI path.
+The smoke suite is network-independent and validates safe/vulnerable source fixtures, evidence
+redaction, dependency-provider behavior, config parsing, SARIF generation, SSRF blocking and the
+local CLI path.
+
+CI also covers Node.js 20.11.1, Node.js 22, Windows with Node.js 24, the bundled GitHub Action and a
+real PostgreSQL API integration job.
 
 ## Documentation
 
 - [Getting started](docs/getting-started.md)
-- [CLI](docs/cli.md)
+- [CLI reference](docs/cli.md)
 - [Configuration](docs/configuration.md)
 - [Rules](docs/rules.md)
 - [Risk scoring](docs/risk-scoring.md)
 - [Security model](docs/security-model.md)
 - [Privacy](docs/privacy.md)
 - [Architecture](docs/architecture.md)
-- [CI](docs/ci.md)
+- [CI and deploy gates](docs/ci.md)
 - [Remote scanning](docs/remote-scanning.md)
 - [False positives](docs/false-positives.md)
 - [Contributing](docs/contributing.md)
 
-## Limitations
+## Known boundaries
 
-- dependency vulnerability lookup requires network access unless a caller supplies another provider;
-- Playwright runtime scanning requires the optional Playwright package and Chromium browser;
-- passive remote observations do not prove exploitability or absence of vulnerabilities;
-- browser runtime DNS pinning is less strict than the low-level HTTP scanner because Chromium controls its own resolver; keep runtime scanning opt-in and use it only for authorized targets;
-- the GitHub Action must be built into `integrations/github-action/dist/index.js` before tagging a distributable action release.
+- online dependency advisories require network access unless another provider is supplied;
+- Playwright runtime scanning requires the optional Playwright package and a Chromium browser;
+- passive remote observations do not prove exploitability or the absence of vulnerabilities;
+- browser runtime DNS pinning is less strict than the low-level HTTP scanner because Chromium
+  controls its own resolver;
+- the bundled GitHub Action must be kept in sync with its source before distributable tags are cut.
 
 ## License
 
