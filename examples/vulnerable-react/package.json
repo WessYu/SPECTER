@@ -1,0 +1,6 @@
+{
+  "name": "specter-example-vulnerable-react",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": { "react": "19.1.1" }
+}
