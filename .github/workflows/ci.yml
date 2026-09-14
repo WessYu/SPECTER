@@ -18,7 +18,7 @@ jobs:
   validate:
     name: Validate (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -40,60 +40,65 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Verify lockfile generation
-        run: test -s pnpm-lock.yaml
-
-      - name: Upload generated lockfile
-        if: matrix.node == '20.11.1'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pnpm-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Produce formatting patch
-        if: matrix.node == '20.11.1'
-        run: |
-          pnpm exec prettier --write .
-          git diff --binary > formatting.patch
-
-      - name: Upload formatting patch
-        if: matrix.node == '20.11.1'
-        uses: actions/upload-artifact@v4
-        with:
-          name: formatting-patch
-          path: formatting.patch
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Restore checkout before validation
-        if: matrix.node == '20.11.1'
-        run: git checkout -- .
+        run: pnpm install --frozen-lockfile
 
       - name: Format check
+        id: format
+        continue-on-error: true
         run: pnpm format:check
 
       - name: Lint
+        id: lint
+        continue-on-error: true
         run: pnpm lint
 
       - name: Typecheck
+        id: typecheck
+        continue-on-error: true
         run: pnpm typecheck
 
       - name: Unit and integration tests
+        id: test
+        continue-on-error: true
         run: pnpm test
 
       - name: Build
+        id: build
+        continue-on-error: true
         run: pnpm build
 
       - name: Portfolio smoke validation
+        id: smoke
+        continue-on-error: true
         run: pnpm smoke
 
       - name: Verify CLI package contents
+        id: package
         if: matrix.node == '20.11.1'
+        continue-on-error: true
         run: |
           mkdir -p artifacts
           pnpm --filter @specter-security/cli pack --pack-destination "$PWD/artifacts"
           tar -tzf artifacts/*.tgz | sort
+
+      - name: Enforce validation result
+        if: always()
+        env:
+          FORMAT: ${{ steps.format.outcome }}
+          LINT: ${{ steps.lint.outcome }}
+          TYPECHECK: ${{ steps.typecheck.outcome }}
+          TEST: ${{ steps.test.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          SMOKE: ${{ steps.smoke.outcome }}
+          PACKAGE: ${{ steps.package.outcome }}
+        run: |
+          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nbuild=%s\nsmoke=%s\npackage=%s\n' \
+            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE" "$PACKAGE"
+          for outcome in "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE"; do
+            if [ "$outcome" != "success" ]; then
+              exit 1
+            fi
+          done
+          if [ "${{ matrix.node }}" = "20.11.1" ] && [ "$PACKAGE" != "success" ]; then
+            exit 1
+          fi
