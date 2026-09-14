@@ -205,7 +205,9 @@ async function persistFinding(
       ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
       ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
       ...(finding.location?.url ? { url: finding.location.url } : {}),
-      ...(finding.evidence !== undefined ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) } : {}),
+      ...(finding.evidence !== undefined
+        ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) }
+        : {}),
     },
     update: {
       severity: finding.severity,
@@ -214,7 +216,9 @@ async function persistFinding(
       ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
       ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
       ...(finding.location?.url ? { url: finding.location.url } : {}),
-      ...(finding.evidence !== undefined ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) } : {}),
+      ...(finding.evidence !== undefined
+        ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) }
+        : {}),
     },
   });
 }
