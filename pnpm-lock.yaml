@@ -82,6 +82,10 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  examples/active-secure: {}
+
+  examples/active-vulnerable: {}
+
   examples/secure-next:
     dependencies:
       next:

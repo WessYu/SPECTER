@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { safeGet } from "@specter/scanner-web";
@@ -7,7 +7,8 @@ import type { ActiveAuthorization } from "@specter/types";
 interface StoredAuthorization {
   readonly hostname: string;
   readonly origin: string;
-  readonly token: string;
+  readonly tokenHash: string;
+  readonly tokenPrefix: string;
   readonly tokenExpiresAt: string;
   readonly verifiedAt?: string;
   readonly authorizationExpiresAt?: string;
@@ -96,7 +97,10 @@ export async function generateDomainAuthorization(
   const record: StoredAuthorization = {
     hostname,
     origin: url.origin,
-    token,
+    tokenHash: createHash("sha256")
+      .update(`specter-verification=${token}`)
+      .digest("hex"),
+    tokenPrefix: token.slice(0, 8),
     tokenExpiresAt: new Date(now + VERIFICATION_TTL_MS).toISOString(),
   };
   const store = await readStore(storePath);
@@ -150,7 +154,7 @@ export async function verifyDomainAuthorization(
   if (
     response.status !== 200 ||
     hostnameOf(new URL(response.url)) !== hostname ||
-    response.body.trim() !== `specter-verification=${record.token}`
+    createHash("sha256").update(response.body.trim()).digest("hex") !== record.tokenHash
   )
     throw new ActiveAuthorizationError(
       "Domain verification failed. The verification file did not match.",
