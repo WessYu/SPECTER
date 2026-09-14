@@ -1,4 +1,4 @@
-import { defaultConfig } from "@specter/config";
+import { loadConfig } from "./config-loader.js";
 import { doctor, initConfig, type CommandResult } from "./commands.js";
 import { runCompareCommand, runScanCommand } from "./scan-command.js";
 
@@ -15,7 +15,14 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
   if (command === "compare") return runCompareCommand(rest);
   if (command === "doctor") return doctor(io.cwd);
   if (command === "init") return initConfig(io.cwd);
-  if (command === "config") return { exitCode: 0, stdout: `${JSON.stringify(defaultConfig, null, 2)}\n` };
+  if (command === "config") {
+    try {
+      const loaded = await loadConfig(io.cwd);
+      return { exitCode: 0, stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\n` };
+    } catch (error: unknown) {
+      return { exitCode: 2, stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n` };
+    }
+  }
   if (command === "version" || command === "--version" || command === "-v") return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
   if (command === "help" || command === "--help" || command === "-h") {
     return { exitCode: 0, stdout: [
@@ -29,3 +36,5 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
 export * from "./commands.js";
 export * from "./scan-command.js";
 export * from "./scan.js";
+
+export * from "./config-loader.js";

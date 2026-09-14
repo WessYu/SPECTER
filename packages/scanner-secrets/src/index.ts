@@ -8,7 +8,7 @@ const TEXT_EXTENSIONS = new Set([
 ]);
 const IGNORE_DIRS = new Set(["node_modules", ".git", ".next", ".turbo", "dist", "build", "coverage", ".cache"]);
 const SAFE_BASENAMES = new Set([".env.example", ".env.sample", ".env.template", ".env.defaults"]);
-const SAFE_SEGMENTS = new Set(["fixtures", "__fixtures__", "docs", "documentation", "examples"]);
+const SAFE_SEGMENTS = new Set(["fixtures", "__fixtures__", "docs", "documentation"]);
 const TEST_FILE = /(?:^|\/)(?:__tests__\/|.*\.(?:test|spec)\.[cm]?[jt]sx?$)/i;
 
 interface SecretPattern {

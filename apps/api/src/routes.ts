@@ -4,9 +4,10 @@ import type { PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { safeGet } from "@specter/scanner-web";
 import type { ScanResult } from "@specter/types";
-import { getAuth } from "./auth.js";
+import { getAuth, requireRole } from "./auth.js";
 import { persistScan, requireProject } from "./persistence.js";
 import { projectBodySchema, scanBodySchema, suppressionBodySchema } from "./schemas.js";
+import { validateScanResult } from "./scan-validation.js";
 
 interface ProjectBody { readonly name: string; readonly slug: string; }
 interface ScanBody { readonly projectId: string; readonly result: ScanResult; }
@@ -22,6 +23,7 @@ export function registerRoutes(app: FastifyInstance, prisma: PrismaClient): void
 
   app.post<{ Body: ProjectBody }>("/api/v1/projects", { schema: { body: projectBodySchema } }, async (request, reply) => {
     const auth = getAuth(request);
+    if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     const project = await prisma.project.create({ data: { organizationId: auth.organizationId, name: request.body.name.trim(), slug: request.body.slug } });
     return reply.code(201).send(project);
   });
@@ -35,14 +37,17 @@ export function registerRoutes(app: FastifyInstance, prisma: PrismaClient): void
     return project ? reply.send(project) : reply.code(404).send({ error: "project_not_found" });
   });
 
-  app.post<{ Body: ScanBody }>("/api/v1/scans", { schema: { body: scanBodySchema } }, async (request, reply) => {
+  app.post<{ Body: ScanBody }>("/api/v1/scans", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } }, schema: { body: scanBodySchema } }, async (request, reply) => {
     const auth = getAuth(request);
-    try { await persistScan(prisma, auth.organizationId, request.body.projectId, request.body.result); }
+    let result: ScanResult;
+    try { result = validateScanResult(request.body.result); }
+    catch (error: unknown) { return reply.code(400).send({ error: "invalid_scan_result", message: error instanceof Error ? error.message : "Invalid scan result" }); }
+    try { await persistScan(prisma, auth.organizationId, request.body.projectId, result); }
     catch (error: unknown) {
       if (error instanceof Error && error.message === "PROJECT_NOT_FOUND") return reply.code(404).send({ error: "project_not_found" });
       throw error;
     }
-    return reply.code(201).send({ id: request.body.result.scanId });
+    return reply.code(201).send({ id: result.scanId });
   });
   app.get<{ Params: IdParams }>("/api/v1/scans/:id", {}, async (request, reply) => {
     const auth = getAuth(request);
@@ -62,16 +67,29 @@ export function registerRoutes(app: FastifyInstance, prisma: PrismaClient): void
 
   app.post<{ Body: SuppressionBody }>("/api/v1/suppressions", { schema: { body: suppressionBodySchema } }, async (request, reply) => {
     const auth = getAuth(request);
+    if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin", "member"])) return reply.code(403).send({ error: "forbidden" });
     if (!(await requireProject(prisma, auth.organizationId, request.body.projectId))) return reply.code(404).send({ error: "project_not_found" });
-    const suppression = await prisma.suppression.create({ data: {
-      projectId: request.body.projectId, ...(request.body.ruleId ? { ruleId: request.body.ruleId } : {}), ...(request.body.fingerprint ? { fingerprint: request.body.fingerprint } : {}),
-      reason: request.body.reason.trim(), ...(request.body.expiresAt ? { expiresAt: new Date(request.body.expiresAt) } : {}), createdBy: auth.principalId,
-    } });
+    const suppression = await prisma.$transaction(async (tx) => {
+      const created = await tx.suppression.create({ data: {
+        projectId: request.body.projectId, ...(request.body.ruleId ? { ruleId: request.body.ruleId } : {}), ...(request.body.fingerprint ? { fingerprint: request.body.fingerprint } : {}),
+        reason: request.body.reason.trim(), ...(request.body.expiresAt ? { expiresAt: new Date(request.body.expiresAt) } : {}), createdBy: auth.principalId,
+      } });
+      await tx.finding.updateMany({
+        where: {
+          projectId: request.body.projectId,
+          ...(request.body.ruleId ? { ruleId: request.body.ruleId } : {}),
+          ...(request.body.fingerprint ? { fingerprint: request.body.fingerprint } : {}),
+        },
+        data: { status: "suppressed" },
+      });
+      return created;
+    });
     return reply.code(201).send(suppression);
   });
 
-  app.post<{ Params: IdParams; Body: { readonly action?: "create" | "check" } }>("/api/v1/domains/:id/verify", { schema: { body: { type: "object", additionalProperties: false, properties: { action: { enum: ["create", "check"] } } } } }, async (request, reply) => {
+  app.post<{ Params: IdParams; Body: { readonly action?: "create" | "check" } }>("/api/v1/domains/:id/verify", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } }, schema: { body: { type: "object", additionalProperties: false, properties: { action: { enum: ["create", "check"] } } } } }, async (request, reply) => {
     const auth = getAuth(request);
+    if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     const domain = await prisma.domain.findFirst({ where: { id: request.params.id, project: { organizationId: auth.organizationId } }, select: { id: true, hostname: true, project: { select: { organizationId: true } } } }) as DomainRow | null;
     if (!domain) return reply.code(404).send({ error: "domain_not_found" });
     if ((request.body.action ?? "create") === "create") {

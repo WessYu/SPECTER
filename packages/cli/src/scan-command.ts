@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { loadConfig } from "./config-loader.js";
 import type { ScanResult, Severity } from "@specter/types";
 import { compareScans, evaluateSecurityGate, executeLocalScan, executeRemoteScan, renderReport } from "./scan.js";
 import type { CommandResult } from "./commands.js";
@@ -8,14 +9,14 @@ interface ParsedScanArgs {
   readonly target?: string;
   readonly format: "terminal" | "json" | "sarif";
   readonly ci: boolean;
-  readonly failOn: Severity | "none";
-  readonly maxScoreDrop: number;
+  readonly failOn?: Severity | "none";
+  readonly maxScoreDrop?: number;
   readonly baselinePath?: string;
   readonly output?: string;
-  readonly runtime: boolean;
+  readonly runtime?: boolean;
   readonly offline: boolean;
-  readonly build: boolean;
-  readonly dependencies: boolean;
+  readonly build?: boolean;
+  readonly dependencies?: boolean;
 }
 
 function needValue(args: readonly string[], index: number, flag: string): string {
@@ -28,27 +29,28 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
   let target: string | undefined;
   let format: ParsedScanArgs["format"] = "terminal";
   let ci = false;
-  let failOn: ParsedScanArgs["failOn"] = "high";
-  let maxScoreDrop = 5;
+  let failOn: ParsedScanArgs["failOn"];
+  let maxScoreDrop: number | undefined;
   let baselinePath: string | undefined;
   let output: string | undefined;
-  let runtime = false;
+  let runtime: boolean | undefined;
   let offline = false;
-  let build = true;
-  let dependencies = true;
+  let build: boolean | undefined;
+  let dependencies: boolean | undefined;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--json") { if (format === "sarif") throw new Error("--json and --sarif are mutually exclusive."); format = "json"; continue; }
     if (arg === "--sarif") { if (format === "json") throw new Error("--json and --sarif are mutually exclusive."); format = "sarif"; continue; }
     if (arg === "--ci") { ci = true; continue; }
     if (arg === "--runtime") { runtime = true; continue; }
+    if (arg === "--no-runtime") { runtime = false; continue; }
     if (arg === "--offline") { offline = true; continue; }
     if (arg === "--no-build") { build = false; continue; }
     if (arg === "--no-dependencies") { dependencies = false; continue; }
     if (arg === "--fail-on") {
-      const value = needValue(args, index, arg) as ParsedScanArgs["failOn"];
+      const value = needValue(args, index, arg);
       if (!["critical", "high", "medium", "low", "none"].includes(value)) throw new Error("--fail-on must be critical, high, medium, low or none.");
-      failOn = value; index += 1; continue;
+      failOn = value as Severity | "none"; index += 1; continue;
     }
     if (arg === "--max-score-drop") {
       const value = Number(needValue(args, index, arg));
@@ -62,9 +64,13 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
     target = arg;
   }
   return {
-    ...(target ? { target } : {}), format, ci, failOn, maxScoreDrop,
+    ...(target ? { target } : {}), format, ci,
+    ...(failOn !== undefined ? { failOn } : {}),
+    ...(maxScoreDrop !== undefined ? { maxScoreDrop } : {}),
     ...(baselinePath ? { baselinePath } : {}), ...(output ? { output } : {}),
-    runtime, offline, build, dependencies,
+    ...(runtime !== undefined ? { runtime } : {}), offline,
+    ...(build !== undefined ? { build } : {}),
+    ...(dependencies !== undefined ? { dependencies } : {}),
   };
 }
 
@@ -102,12 +108,16 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
   try { if (parsed.baselinePath) baseline = await readScanReport(path.resolve(cwd, parsed.baselinePath)); }
   catch (error: unknown) { return { exitCode: 2, stderr: `${error instanceof Error ? error.message : "Unable to read baseline"}\n` }; }
 
+  let loadedConfig: Awaited<ReturnType<typeof loadConfig>>;
+  try { loadedConfig = await loadConfig(cwd); }
+  catch (error: unknown) { return { exitCode: 2, stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n` }; }
+
   const target = parsed.target ?? cwd;
   let scan: ScanResult;
   try {
     scan = /^https?:\/\//i.test(target)
-      ? await executeRemoteScan(target, { ...(baseline ? { baseline } : {}), runtime: parsed.runtime })
-      : await executeLocalScan(path.resolve(cwd, target), { ...(baseline ? { baseline } : {}), offline: parsed.offline, build: parsed.build, dependencies: parsed.dependencies });
+      ? await executeRemoteScan(target, { ...(baseline ? { baseline } : {}), ...(parsed.runtime !== undefined ? { runtime: parsed.runtime } : {}), config: loadedConfig.config })
+      : await executeLocalScan(path.resolve(cwd, target), { ...(baseline ? { baseline } : {}), offline: parsed.offline, ...(parsed.build !== undefined ? { build: parsed.build } : {}), ...(parsed.dependencies !== undefined ? { dependencies: parsed.dependencies } : {}), config: loadedConfig.config });
   } catch (error: unknown) {
     return { exitCode: 3, stderr: `Scan failed: ${error instanceof Error ? error.message : "Unknown scan error"}\n` };
   }
@@ -119,7 +129,7 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
   const rendered = renderReport(scan, parsed.format);
   const withLocation = parsed.format === "terminal" ? `${rendered}\nReport saved:\n${saved}\n` : rendered;
   if (parsed.ci) {
-    const gate = evaluateSecurityGate(scan, baseline, { failOn: parsed.failOn, maxScoreDrop: parsed.maxScoreDrop });
+    const gate = evaluateSecurityGate(scan, baseline, { failOn: parsed.failOn ?? loadedConfig.config.failOn, maxScoreDrop: parsed.maxScoreDrop ?? loadedConfig.config.maxScoreDrop });
     if (!gate.passed) return { exitCode: 1, stdout: withLocation, stderr: `Security gate failed:\n${gate.failures.map((failure) => `- ${failure.message}`).join("\n")}\n` };
   }
   return { exitCode: 0, stdout: withLocation };

@@ -1,7 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { compareScans } from "@specter/core";
-import { getAuth } from "./auth.js";
+import { getAuth, requireRole } from "./auth.js";
 import { requireProject } from "./persistence.js";
 import { hydratePersistedScan, hydrateSurface, type PersistedScanRow } from "./scan-hydration.js";
 
@@ -88,6 +88,7 @@ export function registerHistoryRoutes(app: FastifyInstance, prisma: PrismaClient
 
   app.post<{ Params: ProjectParams; Body: DomainBody }>("/api/v1/projects/:id/domains", { schema: { body: { type: "object", additionalProperties: false, required: ["hostname"], properties: { hostname: { type: "string", minLength: 1, maxLength: 253 } } } } }, async (request, reply) => {
     const auth = getAuth(request);
+    if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     if (!(await requireProject(prisma, auth.organizationId, request.params.id))) return reply.code(404).send({ error: "project_not_found" });
     const hostname = normalizeHostname(request.body.hostname);
     if (!hostname) return reply.code(400).send({ error: "invalid_hostname" });

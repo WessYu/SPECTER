@@ -12,7 +12,7 @@ async function fileExists(file: string): Promise<boolean> { try { await access(f
 export async function initConfig(root: string): Promise<CommandResult> {
   const file = path.join(path.resolve(root), "specter.config.ts");
   if (await fileExists(file)) return { exitCode: 2, stderr: "specter.config.ts already exists.\n" };
-  const content = `export default {\n  failOn: "high",\n  maxScoreDrop: 5,\n  ignore: [],\n  scan: {\n    source: true,\n    build: true,\n    dependencies: true,\n    remote: true,\n    runtime: false,\n  },\n};\n`;
+  const content = `export default {\n  failOn: "high",\n  maxScoreDrop: 5,\n  ignore: [],\n  suppressions: [],\n  scan: {\n    source: true,\n    build: true,\n    dependencies: true,\n    remote: true,\n    runtime: false,\n  },\n};\n`;
   await writeFile(file, content, "utf8");
   return { exitCode: 0, stdout: `Created ${file}\n` };
 }

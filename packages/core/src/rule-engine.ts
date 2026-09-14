@@ -1,5 +1,6 @@
 import type { Finding, Rule, RuleContext, Suppression } from "@specter/types";
 import { redactEvidence } from "./redaction.js";
+import { matchesSuppression } from "./suppression.js";
 
 export interface RuleEngineOptions {
   readonly suppressions?: readonly Suppression[];
@@ -17,13 +18,6 @@ export interface RuleExecutionError {
   readonly message: string;
 }
 
-function isActiveSuppression(suppression: Suppression, finding: Finding, now: Date): boolean {
-  if (suppression.expiresAt && Date.parse(suppression.expiresAt) <= now.getTime()) return false;
-  const matchesRule = suppression.ruleId === undefined || suppression.ruleId === finding.ruleId;
-  const matchesFingerprint =
-    suppression.fingerprint === undefined || suppression.fingerprint === finding.fingerprint;
-  return matchesRule && matchesFingerprint && Boolean(suppression.ruleId || suppression.fingerprint);
-}
 
 function sanitizeFinding(finding: Finding): Finding {
   if (finding.evidence === undefined) return finding;
@@ -53,7 +47,7 @@ export class RuleEngine {
         const result = await rule.evaluate(context);
         for (const raw of result) {
           const finding = sanitizeFinding(raw);
-          const suppression = options.suppressions?.find((item) => isActiveSuppression(item, finding, now));
+          const suppression = options.suppressions?.find((item) => matchesSuppression(finding, item, now));
           if (suppression) suppressed.push({ ...finding, status: "suppressed" });
           else findings.push(finding);
         }

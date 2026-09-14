@@ -109,7 +109,7 @@ async function ensureUserWorkspace(prisma: PrismaClient, github: GitHubUser): Pr
 }
 
 export function registerAuthRoutes(app: FastifyInstance, prisma: PrismaClient): void {
-  app.get("/api/v1/auth/github/start", {}, async (_request, reply) => {
+  app.get("/api/v1/auth/github/start", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (_request, reply) => {
     const state = generateOAuthState();
     const authorize = new URL("https://github.com/login/oauth/authorize");
     authorize.searchParams.set("client_id", env("GITHUB_CLIENT_ID"));
@@ -120,7 +120,7 @@ export function registerAuthRoutes(app: FastifyInstance, prisma: PrismaClient): 
     return reply.code(302).header("location", authorize.toString()).send();
   });
 
-  app.get<{ Querystring: { readonly code?: string; readonly state?: string; readonly error?: string } }>("/api/v1/auth/github/callback", {}, async (request, reply) => {
+  app.get<{ Querystring: { readonly code?: string; readonly state?: string; readonly error?: string } }>("/api/v1/auth/github/callback", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (request, reply) => {
     const expectedState = parseCookieHeader(request.headers.cookie).get(OAUTH_STATE_COOKIE_NAME);
     reply.header("set-cookie", clearCookie(OAUTH_STATE_COOKIE_NAME, oauthStatePath()));
     if (request.query.error) return reply.code(302).header("location", `${dashboardUrl()}/login?error=github_denied`).send();
@@ -179,11 +179,11 @@ export function registerAuthRoutes(app: FastifyInstance, prisma: PrismaClient): 
 
   app.get("/api/v1/api-keys", {}, async (request, reply) => {
     const auth = getAuth(request);
-    if (!requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
+    if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     return reply.send(await prisma.apiKey.findMany({ where: { organizationId: auth.organizationId }, select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true }, orderBy: { createdAt: "desc" } }));
   });
 
-  app.post<{ Body: ApiKeyBody }>("/api/v1/api-keys", { schema: { body: { type: "object", additionalProperties: false, required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 80 } } } } }, async (request, reply) => {
+  app.post<{ Body: ApiKeyBody }>("/api/v1/api-keys", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } }, schema: { body: { type: "object", additionalProperties: false, required: ["name"], properties: { name: { type: "string", minLength: 1, maxLength: 80 } } } } }, async (request, reply) => {
     const auth = getAuth(request);
     if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     const generated = generateApiKey();
@@ -191,7 +191,7 @@ export function registerAuthRoutes(app: FastifyInstance, prisma: PrismaClient): 
     return reply.code(201).send({ ...record, key: generated.value });
   });
 
-  app.post<{ Params: ApiKeyParams }>("/api/v1/api-keys/:id/revoke", {}, async (request, reply) => {
+  app.post<{ Params: ApiKeyParams }>("/api/v1/api-keys/:id/revoke", { config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
     const auth = getAuth(request);
     if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"])) return reply.code(403).send({ error: "forbidden" });
     const updated = await prisma.apiKey.updateMany({ where: { id: request.params.id, organizationId: auth.organizationId, revokedAt: null }, data: { revokedAt: new Date() } });

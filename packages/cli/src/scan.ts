@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { compareScans, evaluateSecurityGate } from "@specter/core";
-import { defaultConfig } from "@specter/config";
+import { applySuppressions, compareScans, evaluateSecurityGate } from "@specter/core";
+import { defaultConfig, type SpecterConfig } from "@specter/config";
 import { calculateRiskScore, summarizeSeverity } from "@specter/risk-engine";
 import { serializeJsonReport, serializeSarif } from "@specter/reporter";
 import { scanBuild } from "@specter/scanner-build";
@@ -17,6 +17,7 @@ export interface ScanExecutionOptions {
   readonly build?: boolean;
   readonly dependencies?: boolean;
   readonly baseline?: ScanResult;
+  readonly config?: SpecterConfig;
 }
 
 function elapsed(started: number): number { return Math.max(0, Date.now() - started); }
@@ -39,6 +40,7 @@ function moduleResult(name: string, started: number, findingCount: number, statu
 
 export async function executeLocalScan(target: string, options: ScanExecutionOptions = {}): Promise<ScanResult> {
   const absolute = path.resolve(target);
+  const config = options.config ?? defaultConfig;
   const startedMs = Date.now();
   const startedAt = new Date(startedMs).toISOString();
   const findings: Finding[] = [];
@@ -46,23 +48,28 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
   const errors: ScanError[] = [];
 
   let mark = Date.now();
-  const source = await scanSource(absolute, { maxFileBytes: defaultConfig.limits.maxFileBytes });
-  findings.push(...source.findings);
-  modules.push(moduleResult("source", mark, source.findings.length));
+  if (config.scan.source) {
+    const source = await scanSource(absolute, { maxFileBytes: config.limits.maxFileBytes });
+    findings.push(...source.findings);
+    modules.push(moduleResult("source", mark, source.findings.length));
 
-  mark = Date.now();
-  const secrets = await scanSecrets(absolute, { maxFileBytes: defaultConfig.limits.maxFileBytes });
-  findings.push(...secrets.findings);
-  modules.push(moduleResult("secrets", mark, secrets.findings.length));
+    mark = Date.now();
+    const secrets = await scanSecrets(absolute, { maxFileBytes: config.limits.maxFileBytes });
+    findings.push(...secrets.findings);
+    modules.push(moduleResult("secrets", mark, secrets.findings.length));
+  } else {
+    modules.push({ name: "source", durationMs: 0, findingCount: 0, status: "skipped" });
+    modules.push({ name: "secrets", durationMs: 0, findingCount: 0, status: "skipped" });
+  }
 
-  if (options.dependencies !== false) {
+  if ((options.dependencies ?? config.scan.dependencies) !== false) {
     mark = Date.now();
     if (options.offline) {
       const inventory = await inspectDependencies(absolute);
       modules.push({ name: `dependencies (${inventory.dependencies.length} inventoried; advisory query offline)`, durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
     } else {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Math.min(defaultConfig.limits.requestTimeoutMs, 8_000));
+      const timer = setTimeout(() => controller.abort(), Math.min(config.limits.requestTimeoutMs, 8_000));
       try {
         const dependencies = await scanDependencies(absolute, new OsvProvider(), controller.signal);
         findings.push(...dependencies.findings);
@@ -74,16 +81,22 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
     }
   } else modules.push({ name: "dependencies", durationMs: 0, findingCount: 0, status: "skipped" });
 
-  if (options.build !== false) {
+  if ((options.build ?? config.scan.build) !== false) {
     mark = Date.now();
-    const build = await scanBuild(absolute, { maxFileBytes: defaultConfig.limits.maxFileBytes * 2 });
+    const build = await scanBuild(absolute, { maxFileBytes: config.limits.maxFileBytes * 2 });
     findings.push(...build.findings);
     modules.push({ name: `build:${build.framework}`, durationMs: elapsed(mark), findingCount: build.findings.length, status: build.outputs.length === 0 ? "skipped" : build.findings.length ? "warning" : "passed" });
   } else modules.push({ name: "build", durationMs: 0, findingCount: 0, status: "skipped" });
 
   const unique = deduplicate(findings);
+  const suppressions = [
+    ...config.ignore.map((ruleId) => ({ ruleId, reason: "Ignored by SPECTER configuration" })),
+    ...config.suppressions,
+  ];
+  const suppressionResult = applySuppressions(unique, suppressions);
+  const reportFindings = [...suppressionResult.findings, ...suppressionResult.suppressed];
   const baselineFingerprints = options.baseline ? new Set(options.baseline.findings.map((finding) => finding.fingerprint)) : undefined;
-  const score = calculateRiskScore(unique, baselineFingerprints ? { baselineFingerprints } : {});
+  const score = calculateRiskScore(reportFindings, baselineFingerprints ? { baselineFingerprints } : {});
   const completedMs = Date.now();
   return {
     schemaVersion: "1",
@@ -94,24 +107,26 @@ export async function executeLocalScan(target: string, options: ScanExecutionOpt
     durationMs: completedMs - startedMs,
     status: "completed",
     score,
-    summary: summarizeSeverity(unique),
-    findings: unique,
+    summary: summarizeSeverity(suppressionResult.findings),
+    findings: reportFindings,
     modules,
     errors,
   };
 }
 
 export async function executeRemoteScan(target: string, options: ScanExecutionOptions = {}): Promise<ScanResult> {
+  const config = options.config ?? defaultConfig;
+  if (!config.scan.remote) throw new Error("Remote scanning is disabled by SPECTER configuration.");
   const startedMs = Date.now();
   const startedAt = new Date(startedMs).toISOString();
   const findings: Finding[] = [];
   const modules: ScanModuleResult[] = [];
   const errors: ScanError[] = [];
   const requestOptions = {
-    requestTimeoutMs: defaultConfig.limits.requestTimeoutMs,
-    totalTimeoutMs: defaultConfig.limits.scanTimeoutMs,
-    maxRedirects: defaultConfig.limits.maxRedirects,
-    maxResponseBytes: defaultConfig.limits.maxResponseBytes,
+    requestTimeoutMs: config.limits.requestTimeoutMs,
+    totalTimeoutMs: config.limits.scanTimeoutMs,
+    maxRedirects: config.limits.maxRedirects,
+    maxResponseBytes: config.limits.maxResponseBytes,
   };
   let mark = Date.now();
   const remote = await scanRemote(target, requestOptions);
@@ -121,7 +136,7 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   mark = Date.now();
   let discoveredSurface: Awaited<ReturnType<typeof discoverSurface>> | undefined;
   try {
-    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: defaultConfig.limits.maxPages, includeRuntime: options.runtime ?? false });
+    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: config.limits.maxPages, includeRuntime: options.runtime ?? config.scan.runtime });
     modules.push({ name: `surface:${discoveredSurface.routes.length} routes/${discoveredSurface.externalDomains.length} domains`, durationMs: elapsed(mark), findingCount: 0, status: "passed" });
   } catch (error: unknown) {
     modules.push({ name: "surface", durationMs: elapsed(mark), findingCount: 0, status: "skipped" });
@@ -129,8 +144,14 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   }
 
   const unique = deduplicate(findings);
+  const suppressions = [
+    ...config.ignore.map((ruleId) => ({ ruleId, reason: "Ignored by SPECTER configuration" })),
+    ...config.suppressions,
+  ];
+  const suppressionResult = applySuppressions(unique, suppressions);
+  const reportFindings = [...suppressionResult.findings, ...suppressionResult.suppressed];
   const baselineFingerprints = options.baseline ? new Set(options.baseline.findings.map((finding) => finding.fingerprint)) : undefined;
-  const score = calculateRiskScore(unique, baselineFingerprints ? { baselineFingerprints } : {});
+  const score = calculateRiskScore(reportFindings, baselineFingerprints ? { baselineFingerprints } : {});
   const completedMs = Date.now();
   return {
     schemaVersion: "1",
@@ -141,8 +162,8 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
     durationMs: completedMs - startedMs,
     status: "completed",
     score,
-    summary: summarizeSeverity(unique),
-    findings: unique,
+    summary: summarizeSeverity(suppressionResult.findings),
+    findings: reportFindings,
     modules,
     errors,
     ...(discoveredSurface ? { surface: { routes: discoveredSurface.routes, externalDomains: discoveredSurface.externalDomains, removedDomains: discoveredSurface.removedDomains } } : {}),
@@ -172,7 +193,7 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
     `LOW          ${counts.low}`,
     `INFO         ${counts.info}`,
     "",
-    `${scan.findings.length} findings require review.`,
+    `${scan.findings.filter((finding) => finding.status !== "suppressed").length} findings require review.`,
   ];
   if (scan.errors.length) lines.push("", "Partial errors", ...scan.errors.map((error) => `- ${error.code}: ${error.message}`));
   return `${lines.join("\n")}\n`;

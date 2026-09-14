@@ -4,3 +4,4 @@ export * from "./redaction.js";
 export * from "./rule-engine.js";
 export * from "./regression.js";
 export * from "./gate.js";
+export * from "./suppression.js";

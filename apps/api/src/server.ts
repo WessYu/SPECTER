@@ -16,7 +16,7 @@ export function createServer(prisma = new PrismaClient()): FastifyInstance {
     requestIdHeader: "x-request-id",
     bodyLimit: 1_000_000,
   });
-  void app.register(rateLimit, { max: 120, timeWindow: "1 minute", keyGenerator: (request: { headers: Record<string, unknown> }) => String(request.headers["x-forwarded-for"] ?? "unknown") });
+  void app.register(rateLimit, { max: 120, timeWindow: "1 minute", keyGenerator: (request: { ip: string }) => request.ip });
   const authHook = createAuthHook(prisma);
   app.addHook("onRequest", async (request, reply) => {
     const path = request.url.split("?", 1)[0] ?? request.url;

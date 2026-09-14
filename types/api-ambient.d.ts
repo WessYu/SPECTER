@@ -6,6 +6,7 @@ declare module "fastify" {
     readonly headers: Record<string, string | string[] | undefined>;
     readonly id: string;
     readonly url: string;
+    readonly ip: string;
   }
   export interface FastifyReply { code(statusCode: number): FastifyReply; send(payload?: unknown): unknown; header(name: string, value: string | readonly string[]): FastifyReply; }
   export interface FastifyInstance {
@@ -46,7 +47,7 @@ declare module "@prisma/client" {
     };
     project: { findFirst(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]>; create(args: unknown): Promise<unknown> };
     scan: { create(args: unknown): Promise<unknown>; findFirst(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]> };
-    finding: { upsert(args: unknown): Promise<unknown>; findFirst(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]> };
+    finding: { upsert(args: unknown): Promise<unknown>; findFirst(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]>; updateMany(args: unknown): Promise<{ count: number }> };
     findingOccurrence: { upsert(args: unknown): Promise<unknown> };
     suppression: { create(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]> };
     domain: { findFirst(args: unknown): Promise<unknown>; findMany(args: unknown): Promise<unknown[]>; create(args: unknown): Promise<unknown>; update(args: unknown): Promise<unknown> };
