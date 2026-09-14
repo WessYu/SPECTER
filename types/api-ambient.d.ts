@@ -11,7 +11,7 @@ declare module "fastify" {
   export interface FastifyReply { code(statusCode: number): FastifyReply; send(payload?: unknown): unknown; header(name: string, value: string | readonly string[]): FastifyReply; }
   export interface FastifyInstance {
     register(plugin: unknown, options?: unknown): Promise<void>;
-    addHook(name: string, hook: (request: FastifyRequest, reply: FastifyReply) => Promise<void> | void): void;
+    addHook(name: string, hook: (request: FastifyRequest, reply: FastifyReply, payload?: unknown) => Promise<unknown> | unknown): void;
     decorateRequest(name: string, value: unknown): void;
     get<T = unknown>(path: string, options: unknown, handler: (request: FastifyRequest<T>, reply: FastifyReply) => Promise<unknown> | unknown): void;
     post<T = unknown>(path: string, options: unknown, handler: (request: FastifyRequest<T>, reply: FastifyReply) => Promise<unknown> | unknown): void;
