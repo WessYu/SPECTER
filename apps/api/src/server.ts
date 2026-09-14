@@ -3,6 +3,7 @@ import rateLimit from "@fastify/rate-limit";
 import { PrismaClient } from "@prisma/client";
 import { createAuthHook } from "./auth.js";
 import { registerRoutes } from "./routes.js";
+import { registerAuthRoutes } from "./auth-routes.js";
 
 export function createServer(prisma = new PrismaClient()): FastifyInstance {
   const app = fastify({
@@ -16,9 +17,11 @@ export function createServer(prisma = new PrismaClient()): FastifyInstance {
   void app.register(rateLimit, { max: 120, timeWindow: "1 minute", keyGenerator: (request: { headers: Record<string, unknown> }) => String(request.headers["x-forwarded-for"] ?? "unknown") });
   const authHook = createAuthHook(prisma);
   app.addHook("onRequest", async (request, reply) => {
-    if (request.url === "/health") return;
+    const path = request.url.split("?", 1)[0] ?? request.url;
+    if (path === "/health" || path === "/api/v1/auth/github/start" || path === "/api/v1/auth/github/callback") return;
     await authHook(request, reply);
   });
+  registerAuthRoutes(app, prisma);
   registerRoutes(app, prisma);
   return app;
 }

@@ -31,6 +31,7 @@ model User {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   memberships    OrganizationMember[]
+  sessions       Session[]
 }
 
 model Organization {
@@ -42,6 +43,7 @@ model Organization {
   members        OrganizationMember[]
   projects       Project[]
   apiKeys        ApiKey[]
+  sessions       Session[]
 }
 
 model OrganizationMember {
@@ -54,6 +56,22 @@ model OrganizationMember {
   user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([organizationId, userId])
   @@index([userId])
+}
+
+
+model Session {
+  id             String               @id @default(cuid())
+  tokenHash      String               @unique
+  userId         String
+  organizationId String
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  createdAt      DateTime             @default(now())
+  lastUsedAt     DateTime             @default(now())
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([userId, revokedAt, expiresAt])
+  @@index([organizationId, revokedAt])
 }
 
 model Project {
