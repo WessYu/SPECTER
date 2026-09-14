@@ -4,6 +4,10 @@ import type {
   FindingCategory,
   FindingSource,
   FindingStatus,
+  FindingScanner,
+  FindingPhase,
+  ActiveProfile,
+  ActiveAuthorizationStatus,
   RiskScore,
   ScanError,
   ScanModuleResult,
@@ -31,9 +35,13 @@ const CATEGORIES = new Set<FindingCategory>([
   "runtime",
   "build",
 ]);
-const CONFIDENCES = new Set<Confidence>(["low", "medium", "high"]);
+const CONFIDENCES = new Set<Confidence>(["low", "medium", "high", "confirmed"]);
 const SOURCES = new Set<FindingSource>(["static", "build", "dependency", "remote", "runtime"]);
-const FINDING_STATUSES = new Set<FindingStatus>(["open", "resolved", "suppressed"]);
+const FINDING_STATUSES = new Set<FindingStatus>(["open", "resolved", "suppressed", "confirmed", "potential", "inconclusive"]);
+const FINDING_SCANNERS = new Set<FindingScanner>(["static", "build", "dependency", "passive", "runtime", "active"]);
+const FINDING_PHASES = new Set<FindingPhase>(["source", "build", "preview", "production", "runtime"]);
+const ACTIVE_PROFILES = new Set<ActiveProfile>(["safe", "standard"]);
+const ACTIVE_AUTH_STATUSES = new Set<ActiveAuthorizationStatus>(["local", "preview", "unverified", "verified", "expired"]);
 const SCAN_STATUSES = new Set<ScanStatus>([
   "queued",
   "running",
@@ -157,6 +165,19 @@ function validateFinding(value: unknown, index: number): Finding {
     row.status === undefined
       ? undefined
       : enumValue(row.status, FINDING_STATUSES, `findings[${index}].status`);
+  const scanner =
+    row.scanner === undefined
+      ? undefined
+      : enumValue(row.scanner, FINDING_SCANNERS, `findings[${index}].scanner`);
+  const phase =
+    row.phase === undefined
+      ? undefined
+      : enumValue(row.phase, FINDING_PHASES, `findings[${index}].phase`);
+  const method = optionalString(row.method, `findings[${index}].method`, 16);
+  const route = optionalString(row.route, `findings[${index}].route`, 4_096);
+  const parameter = optionalString(row.parameter, `findings[${index}].parameter`, 500);
+  const reproduction = optionalString(row.reproduction, `findings[${index}].reproduction`, 4_096);
+  const whyItMatters = optionalString(row.whyItMatters, `findings[${index}].whyItMatters`, 8_192);
   return {
     schemaVersion: "1",
     id: string(row.id, `findings[${index}].id`, 256),
@@ -173,6 +194,13 @@ function validateFinding(value: unknown, index: number): Finding {
     ...(remediation ? { remediation } : {}),
     ...(documentationUrl ? { documentationUrl } : {}),
     ...(status ? { status } : {}),
+    ...(scanner ? { scanner } : {}),
+    ...(phase ? { phase } : {}),
+    ...(method ? { method } : {}),
+    ...(route ? { route } : {}),
+    ...(parameter ? { parameter } : {}),
+    ...(reproduction ? { reproduction } : {}),
+    ...(whyItMatters ? { whyItMatters } : {}),
     ...(row.firstDetectedAt !== undefined
       ? { firstDetectedAt: dateTime(row.firstDetectedAt, `findings[${index}].firstDetectedAt`) }
       : {}),
@@ -303,6 +331,70 @@ export function validateScanResult(value: unknown): ScanResult {
     throw new Error("completedAt must not be earlier than startedAt.");
   const displayName = optionalString(target.displayName, "target.displayName", 500);
   const surface = validateSurface(row.surface);
+  const scanType =
+    row.scanType === undefined
+      ? undefined
+      : enumValue(
+          row.scanType,
+          new Set(["standard", "active"] as const),
+          "scanType",
+        );
+  const profile =
+    row.profile === undefined
+      ? undefined
+      : enumValue(row.profile, ACTIVE_PROFILES, "profile");
+  const authorization =
+    row.authorization === undefined
+      ? undefined
+      : (() => {
+          const value = record(row.authorization, "authorization");
+          const mode = enumValue(
+            value.mode,
+            new Set(["local", "preview", "domain-verification"] as const),
+            "authorization.mode",
+          );
+          const verifiedAt =
+            value.verifiedAt === undefined
+              ? undefined
+              : dateTime(value.verifiedAt, "authorization.verifiedAt");
+          const expiresAt =
+            value.expiresAt === undefined
+              ? undefined
+              : dateTime(value.expiresAt, "authorization.expiresAt");
+          return {
+            status: enumValue(
+              value.status,
+              ACTIVE_AUTH_STATUSES,
+              "authorization.status",
+            ),
+            mode,
+            hostname: string(value.hostname, "authorization.hostname", 253),
+            ...(verifiedAt ? { verifiedAt } : {}),
+            ...(expiresAt ? { expiresAt } : {}),
+          };
+        })();
+  const budget =
+    row.budget === undefined
+      ? undefined
+      : (() => {
+          const value = record(row.budget, "budget");
+          return {
+            used: integer(value.used, "budget.used", 0, 100_000),
+            max: integer(value.max, "budget.max", 1, 100_000),
+            maxRequestsPerSecond: integer(
+              value.maxRequestsPerSecond,
+              "budget.maxRequestsPerSecond",
+              1,
+              100,
+            ),
+            concurrency: integer(
+              value.concurrency,
+              "budget.concurrency",
+              1,
+              100,
+            ),
+          };
+        })();
   return {
     schemaVersion: "1",
     scanId: string(row.scanId, "scanId", 256),
@@ -315,6 +407,22 @@ export function validateScanResult(value: unknown): ScanResult {
     completedAt,
     durationMs: integer(row.durationMs, "durationMs"),
     status: enumValue(row.status, SCAN_STATUSES, "status"),
+    ...(scanType ? { scanType } : {}),
+    ...(authorization ? { authorization } : {}),
+    ...(profile ? { profile } : {}),
+    ...(budget ? { budget } : {}),
+    ...(row.endpointCount !== undefined
+      ? { endpointCount: integer(row.endpointCount, "endpointCount", 0, MAX_ROUTES) }
+      : {}),
+    ...(row.confirmedCount !== undefined
+      ? { confirmedCount: integer(row.confirmedCount, "confirmedCount", 0, MAX_FINDINGS) }
+      : {}),
+    ...(row.potentialCount !== undefined
+      ? { potentialCount: integer(row.potentialCount, "potentialCount", 0, MAX_FINDINGS) }
+      : {}),
+    ...(row.regressionDelta !== undefined
+      ? { regressionDelta: finite(row.regressionDelta, "regressionDelta", -100, 100) }
+      : {}),
     score: validateScore(row.score),
     summary: validateSummary(row.summary),
     findings: findingsRaw.map(validateFinding),

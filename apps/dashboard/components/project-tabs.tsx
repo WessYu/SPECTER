@@ -9,6 +9,7 @@ export function ProjectTabs({ projectId }: { readonly projectId: string }) {
       <Link href={`${base}/history`}>History</Link>
       <Link href={`${base}/attack-surface`}>Attack surface</Link>
       <Link href={`${base}/domains`}>Domains</Link>
+      <Link href={`${base}/active-security`}>Active Security</Link>
     </nav>
   );
 }

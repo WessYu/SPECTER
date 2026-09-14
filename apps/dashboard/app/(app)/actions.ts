@@ -103,3 +103,141 @@ export async function revokeApiKey(formData: FormData): Promise<void> {
   await apiJson<void>(`/api/v1/api-keys/${encodeURIComponent(id)}/revoke`, "POST", {});
   revalidatePath("/settings");
 }
+
+export interface ActiveVerificationState {
+  readonly targetId?: string;
+  readonly token?: string;
+  readonly content?: string;
+  readonly httpPath?: string;
+  readonly verified?: boolean;
+  readonly error?: string;
+}
+
+async function createActiveVerification(
+  targetId: string,
+): Promise<{
+  readonly token: string;
+  readonly content: string;
+  readonly httpPath: string;
+}> {
+  return apiJson(
+    `/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`,
+    "POST",
+    { action: "create" },
+  );
+}
+
+export async function createActiveTarget(
+  _previous: ActiveVerificationState,
+  formData: FormData,
+): Promise<ActiveVerificationState> {
+  const projectId = text(formData, "projectId");
+  const url = text(formData, "url");
+  if (!projectId || !/^https?:\/\//i.test(url))
+    return { error: "Enter a complete HTTP(S) target URL." };
+  try {
+    const target = await apiJson<{ readonly id: string }>(
+      `/api/v1/projects/${encodeURIComponent(projectId)}/active-targets`,
+      "POST",
+      { url },
+    );
+    const verification = await createActiveVerification(target.id);
+    revalidatePath(`/projects/${projectId}/active-security`);
+    return {
+      targetId: target.id,
+      ...verification,
+    };
+  } catch (error: unknown) {
+    return {
+      error:
+        error instanceof ApiError && error.status === 403
+          ? "You do not have permission to add an active target."
+          : "The active target could not be created.",
+    };
+  }
+}
+
+export async function generateActiveVerification(
+  _previous: ActiveVerificationState,
+  formData: FormData,
+): Promise<ActiveVerificationState> {
+  const projectId = text(formData, "projectId");
+  const targetId = text(formData, "targetId");
+  if (!projectId || !targetId)
+    return { error: "Target information is missing." };
+  try {
+    const verification = await createActiveVerification(targetId);
+    revalidatePath(`/projects/${projectId}/active-security`);
+    return {
+      targetId,
+      ...verification,
+    };
+  } catch (error: unknown) {
+    return {
+      error:
+        error instanceof ApiError && error.status === 403
+          ? "Only owners and admins can generate verification tokens."
+          : "Verification token generation failed.",
+    };
+  }
+}
+
+export async function verifyActiveTarget(
+  _previous: ActiveVerificationState,
+  formData: FormData,
+): Promise<ActiveVerificationState> {
+  const projectId = text(formData, "projectId");
+  const targetId = text(formData, "targetId");
+  if (!projectId || !targetId)
+    return { error: "Target information is missing." };
+  try {
+    await apiJson(
+      `/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`,
+      "POST",
+      { action: "check" },
+    );
+    revalidatePath(`/projects/${projectId}/active-security`);
+    return { targetId, verified: true };
+  } catch (error: unknown) {
+    return {
+      error:
+        error instanceof ApiError && error.status === 409
+          ? "Verification file was not found or did not match."
+          : error instanceof ApiError && error.status === 400
+            ? "The verification challenge expired. Generate a new token."
+            : "Target verification failed.",
+    };
+  }
+}
+
+export async function startActiveScan(
+  formData: FormData,
+): Promise<void> {
+  const projectId = text(formData, "projectId");
+  const targetId = text(formData, "targetId");
+  const profile = text(formData, "profile");
+  if (!projectId || !targetId) return;
+  await apiJson(
+    "/api/v1/active-scans",
+    "POST",
+    {
+      targetId,
+      profile: profile === "standard" ? "standard" : "safe",
+    },
+  );
+  revalidatePath(`/projects/${projectId}/active-security`);
+}
+
+export async function cancelActiveScan(
+  formData: FormData,
+): Promise<void> {
+  const projectId = text(formData, "projectId");
+  const scanId = text(formData, "scanId");
+  if (!projectId || !scanId) return;
+  await apiJson(
+    `/api/v1/active-scans/${encodeURIComponent(scanId)}/cancel`,
+    "POST",
+    {},
+  );
+  revalidatePath(`/projects/${projectId}/active-security`);
+}

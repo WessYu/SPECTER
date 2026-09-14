@@ -40,9 +40,15 @@ importers:
       "@prisma/client":
         specifier: ^6.16.2
         version: 6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3)
+      "@specter/config":
+        specifier: workspace:*
+        version: link:../../packages/config
       "@specter/core":
         specifier: workspace:*
         version: link:../../packages/core
+      "@specter/scanner-active":
+        specifier: workspace:*
+        version: link:../../packages/scanner-active
       "@specter/scanner-web":
         specifier: workspace:*
         version: link:../../packages/scanner-web
@@ -81,6 +87,10 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+
+  examples/active-secure: {}
+
+  examples/active-vulnerable: {}
 
   examples/secure-next:
     dependencies:
@@ -121,6 +131,9 @@ importers:
       "@specter/risk-engine":
         specifier: workspace:*
         version: link:../risk-engine
+      "@specter/scanner-active":
+        specifier: workspace:*
+        version: link:../scanner-active
       "@specter/scanner-build":
         specifier: workspace:*
         version: link:../scanner-build
@@ -156,6 +169,21 @@ importers:
 
   packages/risk-engine:
     dependencies:
+      "@specter/types":
+        specifier: workspace:*
+        version: link:../types
+
+  packages/scanner-active:
+    dependencies:
+      "@specter/core":
+        specifier: workspace:*
+        version: link:../core
+      "@specter/risk-engine":
+        specifier: workspace:*
+        version: link:../risk-engine
+      "@specter/scanner-web":
+        specifier: workspace:*
+        version: link:../scanner-web
       "@specter/types":
         specifier: workspace:*
         version: link:../types

@@ -36,7 +36,9 @@ function toInputJson(value: unknown): Prisma.InputJsonValue {
 }
 
 function relevantSources(result: ScanResult): readonly FindingSource[] {
-  return result.target.kind === "url" ? ["remote", "runtime"] : ["static", "build", "dependency"];
+  return result.target.kind === "url"
+    ? ["remote", "runtime"]
+    : ["static", "build", "dependency"];
 }
 
 function toSuppression(row: SuppressionRow): Suppression {
@@ -80,6 +82,24 @@ export async function persistScan(
         startedAt: new Date(result.startedAt),
         completedAt: now,
         durationMs: Math.round(result.durationMs),
+        ...(result.scanType ? { scanType: result.scanType } : {}),
+        ...(result.authorization
+          ? { authorizationJson: toInputJson(result.authorization) }
+          : {}),
+        ...(result.profile ? { profile: result.profile } : {}),
+        ...(result.budget ? { budgetJson: toInputJson(result.budget) } : {}),
+        ...(result.endpointCount !== undefined
+          ? { endpointCount: result.endpointCount }
+          : {}),
+        ...(result.confirmedCount !== undefined
+          ? { confirmedCount: result.confirmedCount }
+          : {}),
+        ...(result.potentialCount !== undefined
+          ? { potentialCount: result.potentialCount }
+          : {}),
+        ...(result.regressionDelta !== undefined
+          ? { regressionDelta: result.regressionDelta }
+          : {}),
       },
     });
 
@@ -97,7 +117,12 @@ export async function persistScan(
       where: {
         projectId,
         source: { in: [...sources] },
-        ...(observedFingerprints.length ? { fingerprint: { notIn: observedFingerprints } } : {}),
+        ...(result.scanType === "active"
+          ? { scanner: "active" }
+          : {}),
+        ...(observedFingerprints.length
+          ? { fingerprint: { notIn: observedFingerprints } }
+          : {}),
         status: { not: "suppressed" },
       },
       data: { status: "resolved" },
@@ -177,6 +202,16 @@ async function persistFinding(
       category: finding.category,
       confidence: finding.confidence,
       source: finding.source,
+      ...(finding.scanner ? { scanner: finding.scanner } : {}),
+      ...(finding.phase ? { phase: finding.phase } : {}),
+      ...(finding.status && ["confirmed", "potential", "inconclusive"].includes(finding.status)
+        ? { validationStatus: finding.status }
+        : {}),
+      ...(finding.method ? { method: finding.method } : {}),
+      ...(finding.route ? { route: finding.route } : {}),
+      ...(finding.parameter ? { parameter: finding.parameter } : {}),
+      ...(finding.reproduction ? { reproduction: finding.reproduction } : {}),
+      ...(finding.whyItMatters ? { whyItMatters: finding.whyItMatters } : {}),
       ...(finding.remediation ? { remediation: finding.remediation } : {}),
       ...(finding.documentationUrl ? { documentationUrl: finding.documentationUrl } : {}),
       firstDetectedAt: observedAt,
@@ -188,6 +223,16 @@ async function persistFinding(
       description: finding.description,
       severity: finding.severity,
       confidence: finding.confidence,
+      ...(finding.scanner ? { scanner: finding.scanner } : {}),
+      ...(finding.phase ? { phase: finding.phase } : {}),
+      ...(finding.status && ["confirmed", "potential", "inconclusive"].includes(finding.status)
+        ? { validationStatus: finding.status }
+        : {}),
+      ...(finding.method ? { method: finding.method } : {}),
+      ...(finding.route ? { route: finding.route } : {}),
+      ...(finding.parameter ? { parameter: finding.parameter } : {}),
+      ...(finding.reproduction ? { reproduction: finding.reproduction } : {}),
+      ...(finding.whyItMatters ? { whyItMatters: finding.whyItMatters } : {}),
       lastDetectedAt: observedAt,
       status,
       ...(finding.remediation ? { remediation: finding.remediation } : {}),

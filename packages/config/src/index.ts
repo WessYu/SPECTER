@@ -17,6 +17,18 @@ export interface SpecterConfig {
     readonly remote: boolean;
     readonly runtime: boolean;
   };
+  readonly active: {
+    readonly enabled: boolean;
+    readonly profile: "safe" | "standard";
+    readonly maxRequests: number;
+    readonly maxRequestsPerSecond: number;
+    readonly concurrency: number;
+    readonly requestTimeoutMs: number;
+    readonly maxEndpoints: number;
+    readonly maxParametersPerEndpoint: number;
+    readonly allowStateChangingMethods: boolean;
+    readonly previewHosts: readonly string[];
+  };
   readonly limits: {
     readonly maxFileBytes: number;
     readonly requestTimeoutMs: number;
@@ -34,6 +46,18 @@ export const defaultConfig: SpecterConfig = Object.freeze({
   ignore: [],
   suppressions: [],
   scan: { source: true, build: true, dependencies: true, remote: true, runtime: false },
+  active: {
+    enabled: false,
+    profile: "safe",
+    maxRequests: 150,
+    maxRequestsPerSecond: 3,
+    concurrency: 2,
+    requestTimeoutMs: 5_000,
+    maxEndpoints: 40,
+    maxParametersPerEndpoint: 10,
+    allowStateChangingMethods: false,
+    previewHosts: [],
+  },
   limits: {
     maxFileBytes: 1_000_000,
     requestTimeoutMs: 10_000,
@@ -293,7 +317,7 @@ export function validateConfig(input: unknown): SpecterConfig {
   if (input === null || typeof input !== "object" || Array.isArray(input))
     throw new Error("SPECTER config must be an object.");
   const value = input as Record<string, unknown>;
-  const allowed = new Set(["failOn", "maxScoreDrop", "ignore", "suppressions", "scan", "limits"]);
+  const allowed = new Set(["failOn", "maxScoreDrop", "ignore", "suppressions", "scan", "active", "limits"]);
   const unknownKeys = Object.keys(value).filter((key) => !allowed.has(key));
   if (unknownKeys.length) throw new Error(`Unknown SPECTER config keys: ${unknownKeys.join(", ")}`);
 
@@ -337,6 +361,49 @@ export function validateConfig(input: unknown): SpecterConfig {
   };
 
   const scan = mergeBooleanGroup(value.scan, defaultConfig.scan, "scan");
+
+  const activeRaw = value.active;
+  let active = defaultConfig.active;
+  if (activeRaw !== undefined) {
+    if (activeRaw === null || typeof activeRaw !== "object" || Array.isArray(activeRaw))
+      throw new Error("active must be an object.");
+    const source = activeRaw as Record<string, unknown>;
+    const unknown = Object.keys(source).filter((key) => !(key in defaultConfig.active));
+    if (unknown.length) throw new Error(`Unknown active keys: ${unknown.join(", ")}`);
+    const profile = source.profile ?? defaultConfig.active.profile;
+    if (profile !== "safe" && profile !== "standard")
+      throw new Error("active.profile must be safe or standard.");
+    const enabled = source.enabled ?? defaultConfig.active.enabled;
+    const allowStateChangingMethods = source.allowStateChangingMethods ?? defaultConfig.active.allowStateChangingMethods;
+    if (typeof enabled !== "boolean") throw new Error("active.enabled must be boolean.");
+    if (typeof allowStateChangingMethods !== "boolean")
+      throw new Error("active.allowStateChangingMethods must be boolean.");
+
+    const positiveInteger = (key: keyof typeof defaultConfig.active, maximum: number): number => {
+      const raw = source[key] ?? defaultConfig.active[key];
+      if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0 || raw > maximum)
+        throw new Error(`active.${key} must be an integer between 1 and ${maximum}.`);
+      return raw;
+    };
+
+    const previewHostsRaw = source.previewHosts ?? defaultConfig.active.previewHosts;
+    if (!Array.isArray(previewHostsRaw) || previewHostsRaw.some((item) => typeof item !== "string" || item.trim().length === 0))
+      throw new Error("active.previewHosts must be an array of hostnames.");
+
+    active = {
+      enabled,
+      profile,
+      maxRequests: positiveInteger("maxRequests", 5_000),
+      maxRequestsPerSecond: positiveInteger("maxRequestsPerSecond", 20),
+      concurrency: positiveInteger("concurrency", 8),
+      requestTimeoutMs: positiveInteger("requestTimeoutMs", 60_000),
+      maxEndpoints: positiveInteger("maxEndpoints", 200),
+      maxParametersPerEndpoint: positiveInteger("maxParametersPerEndpoint", 50),
+      allowStateChangingMethods,
+      previewHosts: previewHostsRaw.map((item) => (item as string).trim().toLowerCase().replace(/\.$/, "")),
+    };
+  }
+
   const limitsRaw = value.limits;
   let limits = defaultConfig.limits;
   if (limitsRaw !== undefined) {
@@ -362,6 +429,7 @@ export function validateConfig(input: unknown): SpecterConfig {
     ignore: ignore.map((item) => item.trim()),
     suppressions,
     scan,
+    active,
     limits,
   };
 }

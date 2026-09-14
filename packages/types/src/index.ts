@@ -2,7 +2,7 @@ export const SPECTER_SCHEMA_VERSION = "1" as const;
 
 export type SchemaVersion = typeof SPECTER_SCHEMA_VERSION;
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
-export type Confidence = "low" | "medium" | "high";
+export type Confidence = "low" | "medium" | "high" | "confirmed";
 export type FindingCategory =
   | "secret"
   | "dependency"
@@ -19,9 +19,34 @@ export type FindingCategory =
   | "runtime"
   | "build";
 export type FindingSource = "static" | "build" | "dependency" | "remote" | "runtime";
-export type FindingStatus = "open" | "resolved" | "suppressed";
+export type FindingStatus =
+  | "open"
+  | "resolved"
+  | "suppressed"
+  | "confirmed"
+  | "potential"
+  | "inconclusive";
 export type ScanTargetKind = "project" | "build" | "url";
 export type ScanStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
+export type FindingScanner = "static" | "build" | "dependency" | "passive" | "runtime" | "active";
+export type FindingPhase = "source" | "build" | "preview" | "production" | "runtime";
+export type ActiveProfile = "safe" | "standard";
+export type ActiveAuthorizationStatus = "local" | "preview" | "unverified" | "verified" | "expired";
+
+export interface ActiveAuthorization {
+  readonly status: ActiveAuthorizationStatus;
+  readonly mode: "local" | "preview" | "domain-verification";
+  readonly hostname: string;
+  readonly verifiedAt?: string;
+  readonly expiresAt?: string;
+}
+
+export interface ActiveBudgetSummary {
+  readonly used: number;
+  readonly max: number;
+  readonly maxRequestsPerSecond: number;
+  readonly concurrency: number;
+}
 
 export interface FindingLocation {
   readonly file?: string;
@@ -40,6 +65,13 @@ export interface Finding {
   readonly category: FindingCategory;
   readonly confidence: Confidence;
   readonly source: FindingSource;
+  readonly scanner?: FindingScanner;
+  readonly phase?: FindingPhase;
+  readonly method?: string;
+  readonly route?: string;
+  readonly parameter?: string;
+  readonly reproduction?: string;
+  readonly whyItMatters?: string;
   readonly fingerprint: string;
   readonly location?: FindingLocation;
   readonly evidence?: unknown;
@@ -91,6 +123,14 @@ export interface ScanResult {
   readonly completedAt: string;
   readonly durationMs: number;
   readonly status: ScanStatus;
+  readonly scanType?: "standard" | "active";
+  readonly authorization?: ActiveAuthorization;
+  readonly profile?: ActiveProfile;
+  readonly budget?: ActiveBudgetSummary;
+  readonly endpointCount?: number;
+  readonly confirmedCount?: number;
+  readonly potentialCount?: number;
+  readonly regressionDelta?: number;
   readonly score: RiskScore;
   readonly summary: SeveritySummary;
   readonly findings: readonly Finding[];

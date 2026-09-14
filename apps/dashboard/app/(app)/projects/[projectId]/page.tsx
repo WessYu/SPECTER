@@ -88,6 +88,53 @@ export default async function ProjectPage({
       )}
       <section className="section">
         <div className="section-head">
+          <h2>Security layers</h2>
+        </div>
+        <div className="layer-grid">
+          <div className="panel">
+            <div className="eyebrow">STATIC</div>
+            <h2>Source + build</h2>
+            <p className="subtle">
+              {data.scans.some(
+                (scan) =>
+                  scan.scanType !== "active" &&
+                  scan.targetKind !== "url",
+              )
+                ? "Measured"
+                : "Not measured"}
+            </p>
+          </div>
+          <div className="panel">
+            <div className="eyebrow">PASSIVE</div>
+            <h2>Published runtime</h2>
+            <p className="subtle">
+              {data.scans.some(
+                (scan) =>
+                  scan.scanType !== "active" &&
+                  scan.targetKind === "url",
+              )
+                ? "Measured"
+                : "Not measured"}
+            </p>
+          </div>
+          <Link
+            href={`/projects/${projectId}/active-security`}
+            className="panel layer-link"
+          >
+            <div className="eyebrow">ACTIVE</div>
+            <h2>Authorized validation</h2>
+            <p className="subtle">
+              {data.scans.some(
+                (scan) => scan.scanType === "active",
+              )
+                ? "Measured"
+                : "Not measured"}
+            </p>
+          </Link>
+        </div>
+      </section>
+      <section className="section">
+        <div className="section-head">
           <h2>Latest findings</h2>
           <Link className="subtle" href={`/projects/${projectId}/findings`}>
             View all
