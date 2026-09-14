@@ -5,6 +5,7 @@ import { createAuthHook } from "./auth.js";
 import { registerRoutes } from "./routes.js";
 import { registerAuthRoutes } from "./auth-routes.js";
 import { registerDashboardRoutes } from "./dashboard-routes.js";
+import { registerHistoryRoutes } from "./history-routes.js";
 
 export function createServer(prisma = new PrismaClient()): FastifyInstance {
   const app = fastify({
@@ -24,6 +25,7 @@ export function createServer(prisma = new PrismaClient()): FastifyInstance {
   });
   registerAuthRoutes(app, prisma);
   registerDashboardRoutes(app, prisma);
+  registerHistoryRoutes(app, prisma);
   registerRoutes(app, prisma);
   return app;
 }
