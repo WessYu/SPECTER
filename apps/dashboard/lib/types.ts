@@ -40,3 +40,15 @@ export interface ScanDetail extends ScanSummary {
   readonly occurrences: ReadonlyArray<FindingOccurrence & { readonly finding: FindingSummary }>;
 }
 export interface ApiKeySummary { readonly id: string; readonly name: string; readonly prefix: string; readonly createdAt: string; readonly lastUsedAt: string | null; readonly revokedAt: string | null; }
+
+export interface HistoryResponse { readonly scans: readonly ScanSummary[]; }
+export interface SeverityChangeView { readonly fingerprint: string; readonly previous: string; readonly current: string; readonly finding: FindingSummary; }
+export interface ScanDiffResponse {
+  readonly previousScanId: string; readonly currentScanId: string;
+  readonly score: { readonly previous: number; readonly current: number; readonly delta: number };
+  readonly new: readonly FindingSummary[]; readonly unchanged: readonly FindingSummary[]; readonly resolved: readonly FindingSummary[]; readonly severityChanged: readonly SeverityChangeView[];
+}
+export interface SurfaceRoute { readonly url: string; readonly method: string; readonly status?: number; readonly contentType?: string; readonly authenticationObservable?: boolean; readonly cors?: string; }
+export interface SurfaceDomain { readonly domain: string; readonly classification: string; readonly resourceTypes: readonly string[]; readonly page?: string; readonly state: "new" | "unchanged" | "removed"; }
+export interface AttackSurfaceResponse { readonly currentScanId: string | null; readonly previousScanId: string | null; readonly observedAt: string | null; readonly routes: readonly SurfaceRoute[]; readonly domains: readonly SurfaceDomain[]; }
+export interface FirstPartyDomain { readonly id: string; readonly hostname: string; readonly verifiedAt: string | null; readonly createdAt: string; }

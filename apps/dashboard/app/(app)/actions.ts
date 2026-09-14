@@ -32,6 +32,30 @@ export async function createApiKey(_previous: ApiKeyState, formData: FormData): 
   }
 }
 
+export interface DomainVerificationState { readonly token?: string; readonly dns?: string; readonly httpPath?: string; readonly domainId?: string; readonly error?: string; }
+export async function createDomain(_previous: DomainVerificationState, formData: FormData): Promise<DomainVerificationState> {
+  const projectId = text(formData, "projectId");
+  const hostname = text(formData, "hostname");
+  if (!projectId || !hostname) return { error: "A valid hostname is required." };
+  try {
+    const domain = await apiJson<{ readonly id: string }>(`/api/v1/projects/${encodeURIComponent(projectId)}/domains`, "POST", { hostname });
+    const verification = await apiJson<{ readonly token: string; readonly dns: string; readonly httpPath: string }>(`/api/v1/domains/${encodeURIComponent(domain.id)}/verify`, "POST", { action: "create" });
+    revalidatePath(`/projects/${projectId}/domains`);
+    return { ...verification, domainId: domain.id };
+  } catch (error: unknown) {
+    if (error instanceof ApiError && error.status === 409) return { error: "That domain is already registered in this project." };
+    return { error: "Domain registration could not be completed." };
+  }
+}
+
+export async function checkDomain(formData: FormData): Promise<void> {
+  const projectId = text(formData, "projectId");
+  const domainId = text(formData, "domainId");
+  if (!projectId || !domainId) return;
+  await apiJson(`/api/v1/domains/${encodeURIComponent(domainId)}/verify`, "POST", { action: "check" });
+  revalidatePath(`/projects/${projectId}/domains`);
+}
+
 export async function revokeApiKey(formData: FormData): Promise<void> {
   const id = text(formData, "id");
   if (!id) return;
