@@ -133,6 +133,33 @@ jobs:
             fi
           fi
 
+  windows-smoke:
+    name: Windows smoke (Node 24)
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npx --yes pnpm@10.17.1 install --frozen-lockfile
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/specter
+        run: npx --yes pnpm@10.17.1 --filter @specter/api prisma:generate
+
+      - name: Build
+        run: npx --yes pnpm@10.17.1 build
+
+      - name: Portfolio smoke validation
+        run: npx --yes pnpm@10.17.1 smoke
+
   database-integration:
     name: PostgreSQL API integration
     needs: validate

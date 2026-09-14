@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createFinding, redactEvidence } from "../packages/core/dist/index.js";
 import { parseConfigSource, validateConfig } from "../packages/config/dist/index.js";
 import { serializeSarif } from "../packages/reporter/dist/index.js";
@@ -15,7 +16,7 @@ import { scanSource } from "../packages/scanner-static/dist/index.js";
 import { analyzeTls, resolvePublicTarget } from "../packages/scanner-web/dist/index.js";
 import { runCli } from "../packages/cli/dist/index.js";
 
-const root = path.resolve(new URL("..", import.meta.url).pathname);
+const root = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 const vulnerable = path.join(root, "examples", "vulnerable-next");
 const secure = path.join(root, "examples", "secure-next");
 
