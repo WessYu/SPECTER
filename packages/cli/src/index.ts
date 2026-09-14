@@ -56,11 +56,7 @@ function renderHelp(): string {
     "                  ╵",
   ];
 
-  const logo = [
-    "┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓",
-    "┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛",
-    "┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸",
-  ];
+  const logo = ["┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓", "┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛", "┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸"];
 
   const command = (syntax: string, description: string): string =>
     `${mint(syntax.padEnd(34))}${muted(description)}`;
