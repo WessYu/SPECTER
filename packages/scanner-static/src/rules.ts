@@ -94,17 +94,33 @@ function lexicalFindings(file: SourceFile): Finding[] {
   return result;
 }
 
+function isClientFacing(file: SourceFile): boolean {
+  const normalized = file.path.replaceAll("\\", "/").toLowerCase();
+  const leading = file.content.slice(0, 512);
+  return /^[\s;]*(?:["']use client["'];?)/.test(leading)
+    || /(?:^|\/)(?:client|components?|pages?)\//.test(normalized)
+    || /\.client\.[cm]?[jt]sx?$/.test(normalized)
+    || /\b(?:window|document|localStorage|sessionStorage|navigator)\b/.test(file.content);
+}
+
 function patternFindings(file: SourceFile): Finding[] {
   const result: Finding[] = [];
   const patterns: readonly [RegExp, RuleMetadata, string][] = [
     [/dangerouslySetInnerHTML\s*=\s*\{/g, metadata.dangerousHtml, "dangerouslySetInnerHTML"],
     [/localStorage\.(?:setItem|getItem)\s*\(\s*["'`](?:token|accessToken|refreshToken|jwt|session)["'`]/gi, metadata.localStorageToken, "localStorage token access"],
     [/\bhttp:\/\/(?!localhost\b|127\.0\.0\.1\b|\[::1\])/gi, metadata.plainHttp, "http://..."],
-    [/(?:process\.env\.|import\.meta\.env\.)(?:DATABASE_URL|PRIVATE_KEY|SECRET_KEY|STRIPE_SECRET_KEY|INTERNAL_API_TOKEN)\b/g, metadata.clientExposure, "private environment variable"],
+    [/import\.meta\.env\.(?:DATABASE_URL|PRIVATE_KEY|SECRET_KEY|STRIPE_SECRET_KEY|INTERNAL_API_TOKEN)\b/g, metadata.clientExposure, "private import.meta.env variable"],
+    [/(?:process\.env\.NEXT_PUBLIC_|import\.meta\.env\.VITE_)[A-Z0-9_]*(?:SECRET|TOKEN|PRIVATE|PASSWORD|DATABASE|API_KEY)[A-Z0-9_]*\b/gi, metadata.clientExposure, "suspicious public environment variable"],
   ];
   for (const [pattern, rule, evidence] of patterns) {
     for (const match of file.content.matchAll(pattern)) {
       result.push(createFinding({ metadata: rule, source: "static", location: { file: file.path, line: lineOf(file.content, match.index) }, evidence }));
+    }
+  }
+  if (isClientFacing(file)) {
+    const privateProcessEnv = /process\.env\.(?:DATABASE_URL|PRIVATE_KEY|SECRET_KEY|STRIPE_SECRET_KEY|INTERNAL_API_TOKEN)\b/g;
+    for (const match of file.content.matchAll(privateProcessEnv)) {
+      result.push(createFinding({ metadata: metadata.clientExposure, source: "static", location: { file: file.path, line: lineOf(file.content, match.index) }, evidence: "private process.env variable in client-facing source" }));
     }
   }
   return result;
