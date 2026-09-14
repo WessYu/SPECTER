@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { matchesSuppression, redactEvidence } from "@specter/core";
 import type { Finding, FindingSource, ScanResult, Suppression } from "@specter/types";
 
@@ -9,6 +9,8 @@ interface ProjectRow {
 interface FindingRow {
   readonly id: string;
 }
+type DatabaseClient = PrismaClient | Prisma.TransactionClient;
+
 interface SuppressionRow {
   readonly ruleId: string | null;
   readonly fingerprint: string | null;
@@ -17,7 +19,7 @@ interface SuppressionRow {
 }
 
 export async function requireProject(
-  prisma: PrismaClient,
+  prisma: DatabaseClient,
   organizationId: string,
   projectId: string,
 ): Promise<ProjectRow | undefined> {
@@ -27,6 +29,10 @@ export async function requireProject(
       select: { id: true, organizationId: true },
     })) as ProjectRow | null) ?? undefined
   );
+}
+
+function toInputJson(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 function relevantSources(result: ScanResult): readonly FindingSource[] {
@@ -67,10 +73,10 @@ export async function persistScan(
         status: result.status,
         score: result.score.value,
         schemaVersion: result.schemaVersion,
-        summaryJson: result.summary,
-        modulesJson: result.modules,
-        errorsJson: result.errors,
-        ...(result.surface ? { surfaceJson: result.surface } : {}),
+        summaryJson: toInputJson(result.summary),
+        modulesJson: toInputJson(result.modules),
+        errorsJson: toInputJson(result.errors),
+        ...(result.surface ? { surfaceJson: toInputJson(result.surface) } : {}),
         startedAt: new Date(result.startedAt),
         completedAt: now,
         durationMs: Math.round(result.durationMs),
@@ -90,7 +96,7 @@ export async function persistScan(
     await tx.finding.updateMany({
       where: {
         projectId,
-        source: { in: sources },
+        source: { in: [...sources] },
         ...(observedFingerprints.length ? { fingerprint: { notIn: observedFingerprints } } : {}),
         status: { not: "suppressed" },
       },
@@ -152,7 +158,7 @@ export async function persistScan(
 }
 
 async function persistFinding(
-  tx: PrismaClient,
+  tx: Prisma.TransactionClient,
   projectId: string,
   result: ScanResult,
   finding: Finding,
@@ -199,7 +205,7 @@ async function persistFinding(
       ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
       ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
       ...(finding.location?.url ? { url: finding.location.url } : {}),
-      ...(finding.evidence !== undefined ? { evidenceJson: redactEvidence(finding.evidence) } : {}),
+      ...(finding.evidence !== undefined ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) } : {}),
     },
     update: {
       severity: finding.severity,
@@ -208,7 +214,7 @@ async function persistFinding(
       ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
       ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
       ...(finding.location?.url ? { url: finding.location.url } : {}),
-      ...(finding.evidence !== undefined ? { evidenceJson: redactEvidence(finding.evidence) } : {}),
+      ...(finding.evidence !== undefined ? { evidenceJson: toInputJson(redactEvidence(finding.evidence)) } : {}),
     },
   });
 }

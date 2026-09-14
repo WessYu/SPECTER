@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
 import { compareScans } from "@specter/core";
 import { getAuth, requireRole } from "./auth.js";
@@ -108,7 +108,7 @@ export function registerHistoryRoutes(app: FastifyInstance, prisma: PrismaClient
       if (!(await requireProject(prisma, auth.organizationId, request.params.id)))
         return reply.code(404).send({ error: "project_not_found" });
       const scans = (await prisma.scan.findMany({
-        where: { projectId: request.params.id, surfaceJson: { not: null } },
+        where: { projectId: request.params.id, surfaceJson: { not: Prisma.DbNull } },
         select: { id: true, completedAt: true, surfaceJson: true },
         orderBy: { completedAt: "desc" },
         take: 2,
