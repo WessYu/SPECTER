@@ -1,5 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "../../", "outDir": "dist", "composite": true },
-  "include": ["src/**/*.ts", "../types/src/**/*.ts", "../core/src/**/*.ts", "../../types/node-ambient.d.ts"]
+  "compilerOptions": {
+    "rootDir": "../../",
+    "outDir": "dist",
+    "composite": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "../types/src/**/*.ts",
+    "../core/src/**/*.ts",
+    "../../types/node-ambient.d.ts",
+    "../../types/playwright-ambient.d.ts"
+  ]
 }
