@@ -703,6 +703,11 @@ export function registerActiveRoutes(
                 authorizationStatus: true,
               },
             },
+            resultScan: {
+              select: {
+                regressionDelta: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
           take: 100,

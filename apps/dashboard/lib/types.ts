@@ -24,6 +24,12 @@ export interface ScanSummary {
   readonly errorsJson?: readonly unknown[];
   readonly completedAt: string;
   readonly durationMs: number;
+  readonly scanType?: "standard" | "active" | null;
+  readonly profile?: "safe" | "standard" | null;
+  readonly endpointCount?: number | null;
+  readonly confirmedCount?: number | null;
+  readonly potentialCount?: number | null;
+  readonly regressionDelta?: number | null;
 }
 export interface SeveritySummary {
   readonly critical: number;
@@ -53,6 +59,14 @@ export interface FindingSummary {
   readonly category: string;
   readonly confidence: string;
   readonly source: string;
+  readonly scanner?: string | null;
+  readonly phase?: string | null;
+  readonly validationStatus?: string | null;
+  readonly method?: string | null;
+  readonly route?: string | null;
+  readonly parameter?: string | null;
+  readonly reproduction?: string | null;
+  readonly whyItMatters?: string | null;
   readonly remediation?: string | null;
   readonly documentationUrl?: string | null;
   readonly firstDetectedAt: string;
@@ -150,4 +164,45 @@ export interface FirstPartyDomain {
   readonly hostname: string;
   readonly verifiedAt: string | null;
   readonly createdAt: string;
+}
+
+export interface ActiveTargetSummary {
+  readonly id: string;
+  readonly projectId: string;
+  readonly url: string;
+  readonly hostname: string;
+  readonly authorizationStatus: "unverified" | "verified" | "expired";
+  readonly tokenPrefix?: string | null;
+  readonly verificationExpiresAt?: string | null;
+  readonly verifiedAt?: string | null;
+  readonly authorizationExpiresAt?: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface ActiveScanSummary {
+  readonly id: string;
+  readonly projectId: string;
+  readonly targetId: string;
+  readonly status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  readonly profile: "safe" | "standard";
+  readonly requestBudget: number;
+  readonly requestCount: number;
+  readonly endpointCount: number;
+  readonly findingCount: number;
+  readonly confirmedCount: number;
+  readonly score: number | null;
+  readonly resultScanId?: string | null;
+  readonly startedAt?: string | null;
+  readonly completedAt?: string | null;
+  readonly createdAt: string;
+  readonly error?: string | null;
+  readonly target: {
+    readonly url: string;
+    readonly hostname: string;
+    readonly authorizationStatus: string;
+  };
+  readonly resultScan?: {
+    readonly regressionDelta: number | null;
+  } | null;
 }
