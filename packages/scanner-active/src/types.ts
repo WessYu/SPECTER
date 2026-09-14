@@ -4,6 +4,7 @@ import type {
   Finding,
   FindingPhase,
   RouteInfo,
+  Suppression,
   ScanResult,
 } from "@specter/types";
 import type { SafeHttpMethod, SafeRequestOptions, SafeResponse } from "@specter/scanner-web";
@@ -58,6 +59,7 @@ export interface ActiveScanOptions {
   readonly rules?: ReadonlySet<string>;
   readonly testUsername?: string;
   readonly testPassword?: string;
+  readonly suppressions?: readonly Suppression[];
 }
 
 export interface ActiveRequest {
