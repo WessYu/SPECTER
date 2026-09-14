@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://specter.security/schemas/scan-result-v1.json",
+  "title": "SPECTER Scan Result v1",
+  "type": "object",
+  "required": ["schemaVersion", "scanId", "target", "startedAt", "completedAt", "durationMs", "status", "score", "summary", "findings", "modules", "errors"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "scanId": { "type": "string", "minLength": 1 },
+    "target": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": { "enum": ["project", "build", "url"] },
+        "value": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "durationMs": { "type": "number", "minimum": 0 },
+    "status": { "enum": ["queued", "running", "completed", "failed", "cancelled"] },
+    "score": { "type": "object" },
+    "summary": { "type": "object" },
+    "findings": { "type": "array" },
+    "modules": { "type": "array" },
+    "errors": { "type": "array" }
+  },
+  "additionalProperties": false
+}
