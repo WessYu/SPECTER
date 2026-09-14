@@ -45,6 +45,34 @@ jobs:
       - name: Verify lockfile generation
         run: test -s pnpm-lock.yaml
 
+      - name: Upload generated lockfile
+        if: matrix.node == '20.11.1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pnpm-lockfile
+          path: pnpm-lock.yaml
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Produce formatting patch
+        if: matrix.node == '20.11.1'
+        run: |
+          pnpm exec prettier --write .
+          git diff --binary > formatting.patch
+
+      - name: Upload formatting patch
+        if: matrix.node == '20.11.1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: formatting-patch
+          path: formatting.patch
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Restore checkout before validation
+        if: matrix.node == '20.11.1'
+        run: git checkout -- .
+
       - name: Format check
         run: pnpm format:check
 
@@ -69,12 +97,3 @@ jobs:
           mkdir -p artifacts
           pnpm --filter @specter-security/cli pack --pack-destination "$PWD/artifacts"
           tar -tzf artifacts/*.tgz | sort
-
-      - name: Upload generated lockfile
-        if: matrix.node == '20.11.1'
-        uses: actions/upload-artifact@v4
-        with:
-          name: pnpm-lockfile
-          path: pnpm-lock.yaml
-          if-no-files-found: error
-          retention-days: 1
