@@ -14,8 +14,8 @@ See the repository README for configuration, security model and limitations.
 
 ## Terminal welcome
 
-Run `specter`, `specter help` or `specter --help` to display the hooded
-specter, mint wordmark, cyan dividers and command reference. Terminals with at
+Run `specter`, `specter help` or `specter --help` to display the arcade
+ghost, mint wordmark, cyan dividers and command reference. Terminals with at
 least 118 columns show the artwork beside the commands; smaller terminals
 use a stacked layout. Colors respect `NO_COLOR`, `FORCE_COLOR` and `TERM=dumb`.
 Reports and version output do not include the artwork.
