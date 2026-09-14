@@ -164,5 +164,10 @@ jobs:
         run: pnpm --filter @specter/api prisma:generate
       - name: Apply migrations
         run: pnpm --filter @specter/api prisma:deploy
+      - name: Build API workspace dependencies
+        run: |
+          pnpm --filter @specter/types build
+          pnpm --filter @specter/core build
+          pnpm --filter @specter/scanner-web build
       - name: Run API integration tests
         run: pnpm --filter @specter/api test
