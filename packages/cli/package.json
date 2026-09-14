@@ -1,0 +1,20 @@
+{
+  "name": "@specter-security/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "specter": "dist/packages/cli/src/bin.js" },
+  "dependencies": {
+    "@specter/config": "workspace:*",
+    "@specter/scanner-dependencies": "workspace:*",
+    "@specter/scanner-secrets": "workspace:*",
+    "@specter/scanner-static": "workspace:*",
+    "@specter/types": "workspace:*"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0",
+    "test": "vitest run"
+  }
+}

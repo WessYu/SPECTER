@@ -23,3 +23,14 @@ declare module "node:path" {
   };
   export default path;
 }
+declare const process: {
+  argv: string[];
+  cwd(): string;
+  exitCode?: number;
+  version: string;
+  env: Record<string, string | undefined>;
+  stdout: { write(value: string): boolean };
+  stderr: { write(value: string): boolean };
+  on(event: "SIGINT", listener: () => void): void;
+};
+declare module "node:process" { const process: typeof globalThis.process; export default process; }

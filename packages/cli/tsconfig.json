@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "rootDir": "../../", "outDir": "dist", "composite": true },
+  "include": [
+    "src/**/*.ts", "../types/src/**/*.ts", "../core/src/**/*.ts", "../config/src/**/*.ts",
+    "../scanner-static/src/**/*.ts", "../scanner-secrets/src/**/*.ts", "../scanner-dependencies/src/**/*.ts",
+    "../../types/node-ambient.d.ts"
+  ]
+}
