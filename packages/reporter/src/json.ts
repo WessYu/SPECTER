@@ -13,6 +13,7 @@ export interface JsonReportEnvelope {
   readonly findings: ScanResult["findings"];
   readonly modules: ScanResult["modules"];
   readonly errors: ScanResult["errors"];
+  readonly surface?: ScanResult["surface"];
 }
 
 export function toJsonReport(scan: ScanResult): JsonReportEnvelope {
@@ -29,6 +30,7 @@ export function toJsonReport(scan: ScanResult): JsonReportEnvelope {
     findings: scan.findings,
     modules: scan.modules,
     errors: scan.errors,
+    ...(scan.surface ? { surface: scan.surface } : {}),
   };
 }
 

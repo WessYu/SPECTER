@@ -136,7 +136,7 @@ export async function executeRemoteScan(target: string, options: ScanExecutionOp
   mark = Date.now();
   let discoveredSurface: Awaited<ReturnType<typeof discoverSurface>> | undefined;
   try {
-    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: config.limits.maxPages, includeRuntime: options.runtime ?? config.scan.runtime });
+    discoveredSurface = await discoverSurface(remote.response.url, { ...requestOptions, maxPages: config.limits.maxPages, concurrency: config.limits.concurrency, includeRuntime: options.runtime ?? config.scan.runtime });
     modules.push({ name: `surface:${discoveredSurface.routes.length} routes/${discoveredSurface.externalDomains.length} domains`, durationMs: elapsed(mark), findingCount: 0, status: "passed" });
   } catch (error: unknown) {
     modules.push({ name: "surface", durationMs: elapsed(mark), findingCount: 0, status: "skipped" });

@@ -57,6 +57,7 @@ function classifyDomain(domain: string, rootHost: string, previousDomains?: Read
 
 export interface SurfaceDiscoveryOptions extends SafeRequestOptions {
   readonly maxPages?: number;
+  readonly concurrency?: number;
   readonly includeRuntime?: boolean;
   readonly previousDomains?: ReadonlySet<string>;
 }
@@ -72,6 +73,7 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
   const initial = await resolvePublicTarget(target);
   const rootHost = initial.url.hostname.toLowerCase();
   const maxPages = Math.max(1, Math.min(options.maxPages ?? 20, 100));
+  const concurrency = Math.max(1, Math.min(Math.floor(options.concurrency ?? 4), 12));
   const queue = [initial.url.toString()];
   const visited = new Set<string>();
   const routes = new Map<string, RouteInfo>();
@@ -103,46 +105,59 @@ export async function discoverSurface(target: string, options: SurfaceDiscoveryO
     }
   } catch { /* sitemap absence is not a finding */ }
 
-  while (queue.length && visited.size < maxPages) {
-    const candidate = queue.shift();
-    if (!candidate || visited.has(candidate)) continue;
-    let parsed: URL;
-    try { parsed = new URL(candidate); } catch { continue; }
-    if (!firstParty(parsed.hostname.toLowerCase(), rootHost)) continue;
-    parsed.hash = "";
-    const normalized = parsed.toString();
-    if (visited.has(normalized)) continue;
-    visited.add(normalized);
-    try {
-      const response = await safeGet(normalized, options);
-      const final = new URL(response.url);
-      if (!firstParty(final.hostname.toLowerCase(), rootHost)) continue;
-      const contentTypeRaw = response.headers["content-type"];
-      const contentType = typeof contentTypeRaw === "string" ? contentTypeRaw : contentTypeRaw ? [...contentTypeRaw].join(", ") : undefined;
-      const corsRaw = response.headers["access-control-allow-origin"];
-      const cors = typeof corsRaw === "string" ? corsRaw : corsRaw ? [...corsRaw].join(", ") : undefined;
-      const route: RouteInfo = {
-        url: `${final.pathname}${final.search}`,
-        method: "GET",
-        status: response.status,
-        ...(contentType ? { contentType } : {}),
-        ...(cors ? { cors } : {}),
-      };
-      routes.set(`GET ${route.url}`, route);
-      if (contentType?.includes("text/html")) {
-        for (const link of extractHtmlLinks(response.body, final)) {
-          const host = hostOf(link);
-          if (!host) continue;
-          if (firstParty(host, rootHost) && visited.size + queue.length < maxPages * 3) queue.push(link);
-          else {
-            const types = domains.get(host) ?? new Set<string>();
-            types.add("document-link");
-            domains.set(host, types);
+  const takeCandidate = (): string | undefined => {
+    while (queue.length > 0 && visited.size < maxPages) {
+      const candidate = queue.shift();
+      if (!candidate) continue;
+      let parsed: URL;
+      try { parsed = new URL(candidate); } catch { continue; }
+      if (!firstParty(parsed.hostname.toLowerCase(), rootHost)) continue;
+      parsed.hash = "";
+      const normalized = parsed.toString();
+      if (visited.has(normalized)) continue;
+      visited.add(normalized);
+      return normalized;
+    }
+    return undefined;
+  };
+
+  const worker = async (): Promise<void> => {
+    while (true) {
+      const normalized = takeCandidate();
+      if (!normalized) return;
+      try {
+        const response = await safeGet(normalized, options);
+        const final = new URL(response.url);
+        if (!firstParty(final.hostname.toLowerCase(), rootHost)) continue;
+        const contentTypeRaw = response.headers["content-type"];
+        const contentType = typeof contentTypeRaw === "string" ? contentTypeRaw : contentTypeRaw ? [...contentTypeRaw].join(", ") : undefined;
+        const corsRaw = response.headers["access-control-allow-origin"];
+        const cors = typeof corsRaw === "string" ? corsRaw : corsRaw ? [...corsRaw].join(", ") : undefined;
+        const route: RouteInfo = {
+          url: `${final.pathname}${final.search}`,
+          method: "GET",
+          status: response.status,
+          ...(contentType ? { contentType } : {}),
+          ...(cors ? { cors } : {}),
+        };
+        routes.set(`GET ${route.url}`, route);
+        if (contentType?.includes("text/html")) {
+          for (const link of extractHtmlLinks(response.body, final)) {
+            const host = hostOf(link);
+            if (!host) continue;
+            if (firstParty(host, rootHost) && visited.size + queue.length < maxPages * 3) queue.push(link);
+            else {
+              const types = domains.get(host) ?? new Set<string>();
+              types.add("document-link");
+              domains.set(host, types);
+            }
           }
         }
-      }
-    } catch { /* inaccessible observed route is skipped */ }
-  }
+      } catch { /* inaccessible observed route is skipped */ }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, maxPages) }, async () => worker()));
 
   const externalDomains: ExternalDomain[] = [...domains.entries()]
     .filter(([domain]) => !firstParty(domain, rootHost))
