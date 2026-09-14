@@ -50,11 +50,7 @@ jobs:
       - name: Format check
         id: format
         continue-on-error: true
-        run: |
-          pnpm exec prettier --write apps/api/test/integration.test.ts
-          git diff -- apps/api/test/integration.test.ts
-          pnpm format:check
-          git diff --exit-code
+        run: pnpm format:check
 
       - name: Lint
         id: lint

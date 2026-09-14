@@ -200,9 +200,9 @@ integration("API PostgreSQL integration", () => {
     });
     expect(own.statusCode).toBe(200);
     expect(foreign.statusCode).toBe(200);
-    expect(
-      (own.json() as Array<{ id: string }>).some((project) => project.id === projectId),
-    ).toBe(true);
+    expect((own.json() as Array<{ id: string }>).some((project) => project.id === projectId)).toBe(
+      true,
+    );
     expect(
       (foreign.json() as Array<{ id: string }>).some((project) => project.id === projectId),
     ).toBe(false);
