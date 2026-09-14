@@ -34,3 +34,40 @@ declare const process: {
   on(event: "SIGINT", listener: () => void): void;
 };
 declare module "node:process" { const process: typeof globalThis.process; export default process; }
+declare module "node:dns/promises" {
+  export function lookup(hostname: string, options: { all: true; verbatim: true }): Promise<Array<{ address: string; family: 4 | 6 }>>;
+}
+declare module "node:net" {
+  export function isIP(input: string): 0 | 4 | 6;
+}
+declare module "node:http" {
+  export interface IncomingHttpHeaders { [key: string]: string | string[] | undefined; location?: string; }
+  export interface IncomingMessage {
+    statusCode?: number;
+    headers: IncomingHttpHeaders;
+    on(event: "data", listener: (chunk: Uint8Array) => void): void;
+    on(event: "end", listener: () => void): void;
+    on(event: "error", listener: (error: Error) => void): void;
+    destroy(error?: Error): void;
+  }
+  export interface ClientRequest {
+    end(): void;
+    destroy(error?: Error): void;
+    on(event: "error", listener: (error: Error) => void): void;
+    setTimeout(ms: number, listener: () => void): void;
+  }
+  export interface RequestOptions {
+    protocol?: string; hostname?: string; port?: string | number; path?: string; method?: string;
+    headers?: Record<string, string>; servername?: string;
+    lookup?: (hostname: string, options: unknown, callback: (error: Error | null, address: string, family: number) => void) => void;
+  }
+  export function request(options: RequestOptions, callback: (response: IncomingMessage) => void): ClientRequest;
+}
+declare module "node:https" {
+  import type { RequestOptions, ClientRequest, IncomingMessage } from "node:http";
+  export function request(options: RequestOptions, callback: (response: IncomingMessage) => void): ClientRequest;
+}
+declare const Buffer: {
+  concat(chunks: readonly Uint8Array[]): { toString(encoding: "utf8"): string; readonly byteLength: number };
+  from(value: string): Uint8Array;
+};
