@@ -92,12 +92,10 @@ export function registerRoutes(app: FastifyInstance, prisma: PrismaClient): void
       try {
         result = validateScanResult(request.body.result);
       } catch (error: unknown) {
-        return reply
-          .code(400)
-          .send({
-            error: "invalid_scan_result",
-            message: error instanceof Error ? error.message : "Invalid scan result",
-          });
+        return reply.code(400).send({
+          error: "invalid_scan_result",
+          message: error instanceof Error ? error.message : "Invalid scan result",
+        });
       }
       try {
         await persistScan(prisma, auth.organizationId, request.body.projectId, result);
@@ -205,14 +203,12 @@ export function registerRoutes(app: FastifyInstance, prisma: PrismaClient): void
             expiresAt: new Date(Date.now() + 30 * 60_000),
           },
         });
-        return reply
-          .code(201)
-          .send({
-            token,
-            dns: `specter-verification=${token}`,
-            httpPath: "/.well-known/specter-verification.txt",
-            expiresInSeconds: 1800,
-          });
+        return reply.code(201).send({
+          token,
+          dns: `specter-verification=${token}`,
+          httpPath: "/.well-known/specter-verification.txt",
+          expiresInSeconds: 1800,
+        });
       }
       const verification = (await prisma.domainVerification.findFirst({
         where: { domainId: domain.id, verifiedAt: null, expiresAt: { gt: new Date() } },

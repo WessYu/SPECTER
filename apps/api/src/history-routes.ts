@@ -92,12 +92,10 @@ export function registerHistoryRoutes(app: FastifyInstance, prisma: PrismaClient
           compareScans(hydratePersistedScan(previousRow), hydratePersistedScan(currentRow)),
         );
       } catch (error: unknown) {
-        return reply
-          .code(409)
-          .send({
-            error: "unsupported_scan_schema",
-            message: error instanceof Error ? error.message : "Unable to hydrate scan.",
-          });
+        return reply.code(409).send({
+          error: "unsupported_scan_schema",
+          message: error instanceof Error ? error.message : "Unable to hydrate scan.",
+        });
       }
     },
   );
