@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
@@ -16,6 +20,39 @@
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@specter/types": [
+        "packages/types/src/index.ts"
+      ],
+      "@specter/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@specter/config": [
+        "packages/config/src/index.ts"
+      ],
+      "@specter/scanner-static": [
+        "packages/scanner-static/src/index.ts"
+      ],
+      "@specter/scanner-secrets": [
+        "packages/scanner-secrets/src/index.ts"
+      ],
+      "@specter/scanner-dependencies": [
+        "packages/scanner-dependencies/src/index.ts"
+      ],
+      "@specter/scanner-build": [
+        "packages/scanner-build/src/index.ts"
+      ],
+      "@specter/scanner-web": [
+        "packages/scanner-web/src/index.ts"
+      ],
+      "@specter/risk-engine": [
+        "packages/risk-engine/src/index.ts"
+      ],
+      "@specter/reporter": [
+        "packages/reporter/src/index.ts"
+      ]
+    }
   }
 }
