@@ -8,8 +8,6 @@
   "include": [
     "src/**/*.ts",
     "../types/src/**/*.ts",
-    "../core/src/**/*.ts",
-    "../../types/node-ambient.d.ts",
-    "../../types/playwright-ambient.d.ts"
+    "../core/src/**/*.ts"
   ]
 }

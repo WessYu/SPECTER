@@ -1,24 +1,28 @@
+import type { Finding } from "@specter/types";
 import { describe, expect, it } from "vitest";
-import { createFinding } from "@specter/core";
 import { calculateRiskScore, summarizeSeverity } from "../src/index.js";
 
-const metadata = {
-  id: "RISK-1",
-  title: "Critical secret",
-  description: "secret",
-  category: "secret" as const,
-  defaultSeverity: "critical" as const,
-  defaultConfidence: "high" as const,
-  remediation: "rotate",
-};
+function makeFinding(overrides: Partial<Finding> = {}): Finding {
+  return {
+    schemaVersion: "1",
+    id: "risk-finding",
+    ruleId: "RISK-1",
+    title: "Critical secret",
+    description: "secret",
+    severity: "critical",
+    category: "secret",
+    confidence: "high",
+    source: "static",
+    fingerprint: "risk-1",
+    remediation: "rotate",
+    status: "open",
+    ...overrides,
+  };
+}
 
 describe("risk engine", () => {
   it("is deterministic and excludes suppressed findings", () => {
-    const finding = createFinding({
-      metadata,
-      source: "static",
-      location: { file: "a.ts", line: 1 },
-    });
+    const finding = makeFinding({ location: { file: "a.ts", line: 1 } });
     const first = calculateRiskScore([finding]);
     const second = calculateRiskScore([finding]);
     expect(first).toEqual(second);
@@ -27,8 +31,7 @@ describe("risk engine", () => {
   });
 
   it("summarizes severities without inventing counts", () => {
-    const finding = createFinding({ metadata, source: "static" });
-    expect(summarizeSeverity([finding])).toEqual({
+    expect(summarizeSeverity([makeFinding()])).toEqual({
       info: 0,
       low: 0,
       medium: 0,

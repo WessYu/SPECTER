@@ -13,8 +13,6 @@
     "../../packages/scanner-secrets/src/**/*.ts",
     "../../packages/scanner-dependencies/src/**/*.ts",
     "../../packages/scanner-build/src/**/*.ts",
-    "../../packages/scanner-web/src/**/*.ts",
-    "../../types/node-ambient.d.ts",
-    "../../types/playwright-ambient.d.ts"
+    "../../packages/scanner-web/src/**/*.ts"
   ]
 }

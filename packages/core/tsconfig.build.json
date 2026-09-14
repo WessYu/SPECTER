@@ -10,5 +10,5 @@
     "declarationMap": false,
     "incremental": false
   },
-  "include": ["src/**/*.ts", "../../types/node-ambient.d.ts"]
+  "include": ["src/**/*.ts"]
 }
