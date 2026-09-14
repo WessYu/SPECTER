@@ -13,10 +13,6 @@ builds, deployed applications, baselines and CI gates.
 [![License: MIT](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
 
 
-┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓
-┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛
-┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸
-```
 
 ## Security changes. Not noise.
 
