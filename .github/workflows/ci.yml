@@ -42,6 +42,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/specter
+        run: pnpm --filter @specter/api prisma:generate
+
       - name: Format check
         id: format
         continue-on-error: true
