@@ -88,3 +88,17 @@ declare module "node:tls" {
   export function connect(options: ConnectionOptions): TLSSocket;
   export function checkServerIdentity(hostname: string, cert: PeerCertificate): Error | undefined;
 }
+declare module "node:child_process" {
+  export interface ChildProcess {
+    stdout?: { on(event: "data", listener: (chunk: Uint8Array) => void): void };
+    stderr?: { on(event: "data", listener: (chunk: Uint8Array) => void): void };
+    on(event: "error", listener: (error: Error) => void): void;
+    on(event: "close", listener: (code: number | null, signal: string | null) => void): void;
+    kill(signal?: string): boolean;
+  }
+  export function spawn(command: string, args?: readonly string[], options?: {
+    cwd?: string; shell?: boolean; env?: Record<string, string | undefined>; stdio?: readonly string[];
+  }): ChildProcess;
+}
+declare function setTimeout(listener: () => void, ms: number): unknown;
+declare function clearTimeout(handle: unknown): void;
