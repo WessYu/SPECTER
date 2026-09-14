@@ -16,7 +16,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "specter": "node packages/cli/dist/bin.js",
-    "smoke": "node scripts/validate-smoke.mjs"
+    "smoke": "node scripts/validate-smoke.mjs",
+    "test:active": "pnpm --filter @specter/scanner-active test",
+    "smoke:active": "node scripts/validate-active-smoke.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",

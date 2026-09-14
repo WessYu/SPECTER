@@ -15,7 +15,8 @@
     "@specter/risk-engine": "workspace:*",
     "@specter/reporter": "workspace:*",
     "@specter/scanner-build": "workspace:*",
-    "@specter/scanner-web": "workspace:*"
+    "@specter/scanner-web": "workspace:*",
+    "@specter/scanner-active": "workspace:*"
   },
   "files": [
     "dist",

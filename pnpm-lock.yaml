@@ -121,6 +121,9 @@ importers:
       "@specter/risk-engine":
         specifier: workspace:*
         version: link:../risk-engine
+      "@specter/scanner-active":
+        specifier: workspace:*
+        version: link:../scanner-active
       "@specter/scanner-build":
         specifier: workspace:*
         version: link:../scanner-build
@@ -156,6 +159,21 @@ importers:
 
   packages/risk-engine:
     dependencies:
+      "@specter/types":
+        specifier: workspace:*
+        version: link:../types
+
+  packages/scanner-active:
+    dependencies:
+      "@specter/core":
+        specifier: workspace:*
+        version: link:../core
+      "@specter/risk-engine":
+        specifier: workspace:*
+        version: link:../risk-engine
+      "@specter/scanner-web":
+        specifier: workspace:*
+        version: link:../scanner-web
       "@specter/types":
         specifier: workspace:*
         version: link:../types

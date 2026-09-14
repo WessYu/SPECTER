@@ -1,0 +1,20 @@
+{
+  "name": "@specter/scanner-active",
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@specter/core": "workspace:*",
+    "@specter/risk-engine": "workspace:*",
+    "@specter/scanner-web": "workspace:*",
+    "@specter/types": "workspace:*"
+  },
+  "exports": { ".": "./dist/index.js" },
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src test --max-warnings=0",
+    "test": "vitest run"
+  }
+}
