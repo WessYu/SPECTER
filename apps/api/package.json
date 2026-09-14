@@ -11,10 +11,13 @@
     "@specter/types": "workspace:*",
     "fastify": "^5.6.0"
   },
-  "devDependencies": { "prisma": "^6.16.2", "typescript": "^5.8.3" },
+  "devDependencies": {
+    "prisma": "^6.16.2",
+    "typescript": "^5.8.3"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "node ../../scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "start": "node dist/apps/api/src/index.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src --max-warnings=0",

@@ -1,8 +1,17 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "../../", "outDir": "dist", "composite": true },
+  "compilerOptions": {
+    "rootDir": "../../",
+    "outDir": "dist",
+    "incremental": false
+  },
   "include": [
-    "src/**/*.ts", "../../packages/types/src/**/*.ts", "../../packages/core/src/**/*.ts", "../../packages/scanner-web/src/**/*.ts",
-    "../../types/node-ambient.d.ts", "../../types/playwright-ambient.d.ts", "../../types/api-ambient.d.ts"
+    "src/**/*.ts",
+    "../../packages/types/src/**/*.ts",
+    "../../packages/core/src/**/*.ts",
+    "../../packages/scanner-web/src/**/*.ts",
+    "../../types/node-ambient.d.ts",
+    "../../types/playwright-ambient.d.ts",
+    "../../types/api-ambient.d.ts"
   ]
 }

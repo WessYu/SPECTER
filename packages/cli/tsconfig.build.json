@@ -3,8 +3,6 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "composite": true,
-    "tsBuildInfoFile": "dist/.tsbuildinfo",
     "paths": {
       "@specter/types": [
         "packages/types/dist/index.d.ts"
@@ -38,7 +36,8 @@
       ]
     },
     "sourceMap": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "incremental": false
   },
   "include": [
     "src/**/*.ts",
