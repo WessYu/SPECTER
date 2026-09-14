@@ -86,6 +86,19 @@ jobs:
           pnpm --filter @specter-security/cli pack --pack-destination "$PWD/artifacts"
           tar -tzf artifacts/*.tgz | sort
 
+      - name: Execute bundled GitHub Action
+        id: action-smoke
+        if: matrix.node == '20.11.1'
+        continue-on-error: true
+        env:
+          INPUT_TARGET: examples/secure-next
+          INPUT_FAIL_ON: high
+          INPUT_MAX_SCORE_DROP: "5"
+          INPUT_OFFLINE: "true"
+        run: |
+          node integrations/github-action/dist/index.js
+          test -s .specter/report.json
+
       - name: Enforce validation result
         if: always()
         env:
@@ -96,14 +109,60 @@ jobs:
           BUILD: ${{ steps.build.outcome }}
           SMOKE: ${{ steps.smoke.outcome }}
           PACKAGE: ${{ steps.package.outcome }}
+          ACTION_SMOKE: ${{ steps.action-smoke.outcome }}
         run: |
-          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nbuild=%s\nsmoke=%s\npackage=%s\n' \
-            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE" "$PACKAGE"
+          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nbuild=%s\nsmoke=%s\npackage=%s\naction-smoke=%s\n' \
+            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE" "$PACKAGE" "$ACTION_SMOKE"
           for outcome in "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE"; do
             if [ "$outcome" != "success" ]; then
               exit 1
             fi
           done
-          if [ "${{ matrix.node }}" = "20.11.1" ] && [ "$PACKAGE" != "success" ]; then
-            exit 1
+          if [ "${{ matrix.node }}" = "20.11.1" ]; then
+            if [ "$PACKAGE" != "success" ] || [ "$ACTION_SMOKE" != "success" ]; then
+              exit 1
+            fi
           fi
+
+  database-integration:
+    name: PostgreSQL API integration
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: specter
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d specter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/specter
+      SPECTER_INTEGRATION_DATABASE: "1"
+      NODE_ENV: test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm --filter @specter/api prisma:generate
+      - name: Apply migrations
+        run: pnpm --filter @specter/api prisma:deploy
+      - name: Run API integration tests
+        run: pnpm --filter @specter/api test
