@@ -1,7 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { createFinding } from "@specter/core";
-import type { DependencyFinding, Finding, RuleMetadata, Severity } from "@specter/types";
+import type { DependencyFinding, RuleMetadata, Severity } from "@specter/types";
 
 export interface DependencyRecord {
   readonly name: string;
