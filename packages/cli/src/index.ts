@@ -46,7 +46,7 @@ function renderHelp(): string {
       const left = ghost[index] ?? "";
       const right = help[index] ?? "";
       return `${left.padEnd(width)}    ${right}`.trimEnd();
-    }).join("\\n") + "\\n"
+    }).join("\n") + "\n"
   );
 }
 
@@ -61,24 +61,24 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
       const loaded = await loadConfig(io.cwd);
       return {
         exitCode: 0,
-        stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\\n`,
+        stdout: `${JSON.stringify({ ...(loaded.path ? { path: loaded.path } : {}), config: loaded.config }, null, 2)}\n`,
       };
     } catch (error: unknown) {
       return {
         exitCode: 2,
-        stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\\n`,
+        stderr: `${error instanceof Error ? error.message : "Unable to load SPECTER config"}\n`,
       };
     }
   }
   if (command === "version" || command === "--version" || command === "-v")
-    return { exitCode: 0, stdout: `${CLI_VERSION}\\n` };
+    return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
   if (command === "help" || command === "--help" || command === "-h") {
     return {
       exitCode: 0,
       stdout: renderHelp(),
     };
   }
-  return { exitCode: 2, stderr: `Unknown command: ${command}\\n` };
+  return { exitCode: 2, stderr: `Unknown command: ${command}\n` };
 }
 
 export * from "./commands.js";
