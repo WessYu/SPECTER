@@ -117,7 +117,9 @@ integration("API PostgreSQL integration", () => {
 
   afterAll(async () => {
     if (orgAId || orgBId) {
-      await prisma.organization.deleteMany({ where: { id: { in: [orgAId, orgBId].filter(Boolean) } } });
+      await prisma.organization.deleteMany({
+        where: { id: { in: [orgAId, orgBId].filter(Boolean) } },
+      });
     }
     await prisma.user.deleteMany({ where: { email: { in: [userAEmail, userBEmail] } } });
     await app.close();
@@ -198,9 +200,11 @@ integration("API PostgreSQL integration", () => {
     });
     expect(own.statusCode).toBe(200);
     expect(foreign.statusCode).toBe(200);
-    expect((own.json() as Array<{ id: string }>).some((project) => project.id === projectId)).toBe(true);
-    expect((foreign.json() as Array<{ id: string }>).some((project) => project.id === projectId)).toBe(
-      false,
-    );
+    expect(
+      (own.json() as Array<{ id: string }>).some((project) => project.id === projectId),
+    ).toBe(true);
+    expect(
+      (foreign.json() as Array<{ id: string }>).some((project) => project.id === projectId),
+    ).toBe(false);
   });
 });
