@@ -71,3 +71,20 @@ declare const Buffer: {
   concat(chunks: readonly Uint8Array[]): { toString(encoding: "utf8"): string; readonly byteLength: number };
   from(value: string): Uint8Array;
 };
+declare module "node:tls" {
+  export interface PeerCertificate { subject?: { CN?: string }; issuer?: { CN?: string }; valid_from?: string; valid_to?: string; fingerprint256?: string; }
+  export interface TLSSocket {
+    authorized: boolean;
+    authorizationError?: Error;
+    getPeerCertificate(detailed?: boolean): PeerCertificate;
+    getProtocol(): string | null;
+    end(): void;
+    destroy(error?: Error): void;
+    setTimeout(ms: number, listener: () => void): void;
+    once(event: "secureConnect", listener: () => void): void;
+    once(event: "error", listener: (error: Error) => void): void;
+  }
+  export interface ConnectionOptions { host: string; port: number; servername: string; rejectUnauthorized: boolean; }
+  export function connect(options: ConnectionOptions): TLSSocket;
+  export function checkServerIdentity(hostname: string, cert: PeerCertificate): Error | undefined;
+}
