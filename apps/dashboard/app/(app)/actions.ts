@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { apiFetch, apiJson, ApiError } from "../../lib/api";
+import { apiJson, ApiError } from "../../lib/api";
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key);

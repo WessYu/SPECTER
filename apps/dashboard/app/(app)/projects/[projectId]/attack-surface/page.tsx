@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { apiFetch } from "../../../../../lib/api";
 import type { AttackSurfaceResponse, SurfaceRoute } from "../../../../../lib/types";
 import { formatDate, shortId } from "../../../../../lib/format";
