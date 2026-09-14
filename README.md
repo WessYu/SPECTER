@@ -12,24 +12,6 @@ builds, deployed applications, baselines and CI gates.
 [![CI](https://github.com/WessYu/SPECTER/actions/workflows/ci.yml/badge.svg)](https://github.com/WessYu/SPECTER/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-111827.svg)](LICENSE)
 
-</div>
-
-```text
-             .-─────────-.
-          .-'             '-.
-        .'       ╭───╮       '.
-       /        ╱     ╲        \
-      /        │  ◢ ◣  │        \
-     │         │   ▾   │         │
-     │         ╲  ───  ╱         │
-      \         '───'         /
-       '.       ╱│   │╲       .'
-         '-._  ╱ │   │ ╲  _.-'
-             '╲  │   │  ╱'
-               ╲│   │╱
-                ╲   ╱
-                 ╲ ╱
-                  ╵
 
 ┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓
 ┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛
