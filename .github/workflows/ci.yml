@@ -77,6 +77,27 @@ jobs:
         continue-on-error: true
         run: pnpm build
 
+      - name: Verify public package consumer
+        id: public-package
+        if: matrix.node == '20.11.1'
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts/public .tmp/specter-consumer
+          pnpm --filter @wess2001/specter pack --pack-destination "$PWD/artifacts/public"
+          cd .tmp/specter-consumer
+          npm init -y >/dev/null
+          npm install --ignore-scripts "$GITHUB_WORKSPACE"/artifacts/public/*.tgz
+          node --input-type=module <<'NODE'
+          import { SPECTER_VERSION, executeLocalScan } from "@wess2001/specter";
+          const report = await executeLocalScan(
+            process.env.GITHUB_WORKSPACE + "/examples/secure-next",
+            { offline: true, build: false },
+          );
+          if (SPECTER_VERSION !== "0.1.0") throw new Error("Unexpected public package version");
+          if (report.score.value !== 100) throw new Error("Public package smoke score must be 100");
+          NODE
+          ./node_modules/.bin/specter version
+
       - name: Portfolio smoke validation
         id: smoke
         continue-on-error: true
@@ -131,16 +152,17 @@ jobs:
           ACTIVE_SMOKE: ${{ steps.active-smoke.outcome }}
           PACKAGE: ${{ steps.package.outcome }}
           ACTION_SMOKE: ${{ steps.action-smoke.outcome }}
+          PUBLIC_PACKAGE: ${{ steps.public-package.outcome }}
         run: |
-          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nactive-test=%s\nbuild=%s\nsmoke=%s\nactive-smoke=%s\npackage=%s\naction-smoke=%s\n' \
-            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$ACTIVE_TEST" "$BUILD" "$SMOKE" "$ACTIVE_SMOKE" "$PACKAGE" "$ACTION_SMOKE"
+          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nactive-test=%s\nbuild=%s\nsmoke=%s\nactive-smoke=%s\npackage=%s\naction-smoke=%s\npublic-package=%s\n' \
+            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$ACTIVE_TEST" "$BUILD" "$SMOKE" "$ACTIVE_SMOKE" "$PACKAGE" "$ACTION_SMOKE" "$PUBLIC_PACKAGE"
           for outcome in "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$ACTIVE_TEST" "$BUILD" "$SMOKE" "$ACTIVE_SMOKE"; do
             if [ "$outcome" != "success" ]; then
               exit 1
             fi
           done
           if [ "${{ matrix.node }}" = "20.11.1" ]; then
-            if [ "$PACKAGE" != "success" ] || [ "$ACTION_SMOKE" != "success" ]; then
+            if [ "$PACKAGE" != "success" ] || [ "$ACTION_SMOKE" != "success" ] || [ "$PUBLIC_PACKAGE" != "success" ]; then
               exit 1
             fi
           fi
