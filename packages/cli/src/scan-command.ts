@@ -230,7 +230,7 @@ async function addActiveValidation(
       storePath: defaultAuthorizationStore(cwd),
       ...(base.surface?.routes ? { observedRoutes: base.surface.routes } : {}),
       ...(baseline ? { baseline } : {}),
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       ...(parsed.rules.size > 0 ? { rules: parsed.rules } : {}),
       ...(process.env.SPECTER_TEST_USERNAME
         ? {
