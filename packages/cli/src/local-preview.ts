@@ -82,7 +82,7 @@ async function waitForPreview(
         totalTimeoutMs: 1_000,
         maxRedirects: 0,
         maxResponseBytes: 16_384,
-        signal,
+        ...(signal === undefined ? {} : { signal }),
       });
       if (response.status > 0) return;
     } catch (error: unknown) {
