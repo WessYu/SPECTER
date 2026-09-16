@@ -1,9 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
     "declaration": true,
     "declarationMap": false,
     "emitDeclarationOnly": true,
-    "sourceMap": false
+    "sourceMap": false,
+    "paths": {
+      "@specter-security/cli": [
+        "packages/cli/dist/index.d.ts"
+      ],
+      "@specter/scanner-active": [
+        "packages/scanner-active/dist/index.d.ts"
+      ]
+    }
   }
 }
