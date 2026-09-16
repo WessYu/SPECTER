@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "specter": "node packages/cli/dist/bin.js",
     "smoke": "node scripts/validate-smoke.mjs",
-    "test:active": "pnpm --filter @specter/scanner-active test",
+    "test:active": "pnpm --filter @specter/scanner-active... build && pnpm --filter @specter/scanner-active test",
     "smoke:active": "node scripts/validate-active-smoke.mjs"
   },
   "devDependencies": {
