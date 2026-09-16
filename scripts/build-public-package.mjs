@@ -1,34 +1,35 @@
+import { execFileSync } from "node:child_process";
 import { mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
-import { build } from "esbuild";
 
 const root = process.cwd();
-const outdir = resolve(root, "packages/public/dist");
+const outdir = resolve(root, "distribution/specter/dist");
+const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+
 await rm(outdir, { recursive: true, force: true });
 await mkdir(outdir, { recursive: true });
 
-const common = {
-  bundle: true,
-  platform: "node",
-  format: "esm",
-  target: "node20",
-  sourcemap: false,
-  minify: false,
-  packages: "bundle",
-  tsconfig: resolve(root, "tsconfig.base.json"),
-  external: ["playwright"],
-  logLevel: "info",
-};
+function runEsbuild(entry, outfile, { banner = false } = {}) {
+  const args = [
+    "--filter",
+    "@specter-security/github-action",
+    "exec",
+    "esbuild",
+    entry,
+    "--bundle",
+    "--platform=node",
+    "--format=esm",
+    "--target=node20",
+    "--packages=bundle",
+    "--external:playwright",
+    `--tsconfig=${resolve(root, "tsconfig.base.json")}`,
+    `--outfile=${outfile}`,
+  ];
+  if (banner) args.push("--banner:js=#!/usr/bin/env node");
+  execFileSync(pnpm, args, { cwd: root, stdio: "inherit" });
+}
 
-await build({
-  ...common,
-  entryPoints: [resolve(root, "packages/cli/src/index.ts")],
-  outfile: resolve(outdir, "index.js"),
-});
-
-await build({
-  ...common,
-  entryPoints: [resolve(root, "packages/cli/src/bin.ts")],
-  outfile: resolve(outdir, "bin.js"),
-  banner: { js: "#!/usr/bin/env node" },
+runEsbuild(resolve(root, "packages/cli/src/index.ts"), resolve(outdir, "index.js"));
+runEsbuild(resolve(root, "packages/cli/src/bin.ts"), resolve(outdir, "bin.js"), {
+  banner: true,
 });
