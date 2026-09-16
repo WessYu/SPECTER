@@ -13,6 +13,7 @@
     "../../packages/scanner-secrets/src/**/*.ts",
     "../../packages/scanner-dependencies/src/**/*.ts",
     "../../packages/scanner-build/src/**/*.ts",
-    "../../packages/scanner-web/src/**/*.ts"
+    "../../packages/scanner-web/src/**/*.ts",
+    "../../packages/scanner-active/src/**/*.ts"
   ]
 }
