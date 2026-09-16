@@ -1,0 +1,46 @@
+{
+  "name": "@wess2001/specter",
+  "version": "0.1.0",
+  "description": "Application security from source to production.",
+  "type": "module",
+  "bin": {
+    "specter": "dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./index.d.ts",
+  "files": [
+    "dist",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.11"
+  },
+  "license": "MIT",
+  "author": "WessYu",
+  "keywords": [
+    "appsec",
+    "security",
+    "sast",
+    "devsecops",
+    "sarif",
+    "cli"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WessYu/SPECTER.git"
+  },
+  "homepage": "https://github.com/WessYu/SPECTER#readme",
+  "bugs": {
+    "url": "https://github.com/WessYu/SPECTER/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
