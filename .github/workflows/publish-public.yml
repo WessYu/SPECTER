@@ -1,0 +1,167 @@
+name: Publish public SPECTER package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact @wess2001/specter version to publish
+        required: true
+        default: 0.1.0
+        type: string
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release: specter v'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Use npm with Trusted Publishing support
+        run: npm install --global npm@11.5.1
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release identity
+        id: release
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ github.event.inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          package_name=$(node -p "require('./packages/public/package.json').name")
+          package_version=$(node -p "require('./packages/public/package.json').version")
+          requested_version="${REQUESTED_VERSION:-$package_version}"
+          test "$requested_version" = "$package_version" || {
+            echo "Requested version $requested_version does not match $package_version" >&2
+            exit 1
+          }
+          if [[ "$EVENT_NAME" == "push" ]] && [[ "$HEAD_MESSAGE" != release: specter v${package_version}* ]]; then
+            echo "Automatic publish requires a release: specter v${package_version} commit" >&2
+            exit 1
+          fi
+          echo "name=$package_name" >> "$GITHUB_OUTPUT"
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
+
+      - name: Check registry state
+        id: registry
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.release.outputs.name }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          set +e
+          output=$(npm view "${PACKAGE}@${VERSION}" version --json 2>&1)
+          status=$?
+          set -e
+          if [[ "$status" -eq 0 ]]; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+          elif grep -Eqi 'E404|No match found for version|is not in this registry|Not Found' <<<"$output"; then
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          else
+            printf '%s\n' "$output" >&2
+            exit "$status"
+          fi
+
+      - name: Run repository release gate
+        run: |
+          pnpm format:check
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm build
+          pnpm smoke
+          pnpm smoke:active
+
+      - name: Pack exact public artifact
+        id: pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/public
+          pnpm --filter @wess2001/specter pack --pack-destination "$PWD/artifacts/public"
+          package_file=$(find artifacts/public -maxdepth 1 -name '*.tgz' -print -quit)
+          test -n "$package_file"
+          test -s "$package_file"
+          tar -tzf "$package_file" | sort > public-tarball-files.txt
+          grep -qx 'package/dist/bin.js' public-tarball-files.txt
+          grep -qx 'package/dist/index.js' public-tarball-files.txt
+          grep -qx 'package/dist/index.d.ts' public-tarball-files.txt
+          grep -qx 'package/LICENSE' public-tarball-files.txt
+          grep -qx 'package/README.md' public-tarball-files.txt
+          if grep -Eq '^package/(src|node_modules|test|coverage)(/|$)' public-tarball-files.txt; then
+            echo "Public tarball contains internal source or temporary files" >&2
+            exit 1
+          fi
+          echo "package_file=$package_file" >> "$GITHUB_OUTPUT"
+
+      - name: Consume exact tarball outside monorepo
+        shell: bash
+        env:
+          PACKAGE_FILE: ${{ steps.pack.outputs.package_file }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          package_path="$PWD/$PACKAGE_FILE"
+          temp_dir=$(mktemp -d)
+          cd "$temp_dir"
+          npm init -y >/dev/null
+          npm install --ignore-scripts "$package_path"
+          test "$(./node_modules/.bin/specter version)" = "$VERSION"
+          node --input-type=module <<'NODE'
+          import { SPECTER_VERSION, executeLocalScan } from "@wess2001/specter";
+          const report = await executeLocalScan(process.env.GITHUB_WORKSPACE + "/examples/secure-next", {
+            offline: true,
+            build: false,
+          });
+          if (SPECTER_VERSION !== "0.1.0") throw new Error("Unexpected SPECTER version");
+          if (report.score.value !== 100) throw new Error("Secure fixture must score 100");
+          NODE
+
+      - name: Publish validated tarball
+        if: steps.registry.outputs.already_published != 'true'
+        env:
+          PACKAGE_FILE: ${{ steps.pack.outputs.package_file }}
+        run: npm publish "$PACKAGE_FILE" --access public --provenance
+
+      - name: Verify registry version
+        shell: bash
+        env:
+          PACKAGE: ${{ steps.release.outputs.name }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          for attempt in {1..12}; do
+            published=$(npm view "${PACKAGE}@${VERSION}" version --json 2>/dev/null | tr -d '"' || true)
+            [[ "$published" == "$VERSION" ]] && exit 0
+            sleep 5
+          done
+          echo "Registry did not expose ${PACKAGE}@${VERSION}" >&2
+          exit 1
