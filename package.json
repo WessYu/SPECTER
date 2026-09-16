@@ -18,12 +18,11 @@
     "specter": "node packages/cli/dist/bin.js",
     "smoke": "node scripts/validate-smoke.mjs",
     "public:build": "node scripts/build-public-package.mjs",
-    "public:pack": "pnpm public:build && pnpm --filter @wess2001/specter pack"
+    "public:pack": "pnpm public:build && pnpm --dir distribution/specter pack"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@types/node": "^22.15.0",
-    "esbuild": "^0.25.9",
     "eslint": "^9.35.0",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",
