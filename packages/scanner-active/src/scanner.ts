@@ -13,7 +13,6 @@ import type {
   ScanModuleResult,
   ScanResult,
   Severity,
-  Suppression,
 } from "@specter/types";
 import {
   ActiveAuthorizationError,
