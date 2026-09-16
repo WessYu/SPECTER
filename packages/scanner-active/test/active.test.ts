@@ -27,7 +27,7 @@ afterEach(async () => {
 const config: ActiveScannerConfig = {
   enabled: true,
   profile: "safe",
-  maxRequests: 150,
+  maxRequests: 500,
   maxRequestsPerSecond: 100,
   concurrency: 2,
   requestTimeoutMs: 2_000,
