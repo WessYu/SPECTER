@@ -243,7 +243,7 @@ export async function runPentestCommand(
       config,
       storePath: defaultAuthorizationStore(cwd),
       ...(baseline ? { baseline } : {}),
-      signal,
+      ...(signal === undefined ? {} : { signal }),
       ...(parsed.rules.size > 0 ? { rules: parsed.rules } : {}),
       ...(process.env.SPECTER_TEST_USERNAME
         ? { testUsername: process.env.SPECTER_TEST_USERNAME }
