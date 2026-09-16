@@ -421,7 +421,7 @@ export async function runActiveScan(
     await budget.consume(options.signal);
     return safeRequest(url, {
       ...requestOptions,
-      signal: options.signal,
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
       allowLocalhost,
       requireSameHostname: true,
       requestTimeoutMs: options.config.requestTimeoutMs,
