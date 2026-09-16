@@ -8,12 +8,8 @@
     "emitDeclarationOnly": true,
     "sourceMap": false,
     "paths": {
-      "@specter-security/cli": [
-        "packages/cli/dist/index.d.ts"
-      ],
-      "@specter/scanner-active": [
-        "packages/scanner-active/dist/index.d.ts"
-      ]
+      "@specter-security/cli": ["packages/cli/dist/index.d.ts"],
+      "@specter/scanner-active": ["packages/scanner-active/dist/index.d.ts"]
     }
   }
 }
