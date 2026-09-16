@@ -21,11 +21,7 @@ Active testing remains authorization-gated and is intended only for systems you 
 ## Programmatic API
 
 ```js
-import {
-  executeLocalScan,
-  executeRemoteScan,
-  executeActiveScan,
-} from "@wess2001/specter";
+import { executeLocalScan, executeRemoteScan, executeActiveScan } from "@wess2001/specter";
 
 const local = await executeLocalScan(".", { offline: true });
 console.log(local.score.value);
