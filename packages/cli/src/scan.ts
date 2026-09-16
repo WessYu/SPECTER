@@ -336,10 +336,10 @@ export function mergeActiveScan(
     status:
       base.status === "completed" && active.status === "completed" ? "completed" : active.status,
     scanType: "active",
-    authorization: active.authorization,
-    profile: active.profile,
-    budget: active.budget,
-    endpointCount: active.endpointCount,
+    ...(active.authorization === undefined ? {} : { authorization: active.authorization }),
+    ...(active.profile === undefined ? {} : { profile: active.profile }),
+    ...(active.budget === undefined ? {} : { budget: active.budget }),
+    ...(active.endpointCount === undefined ? {} : { endpointCount: active.endpointCount }),
     confirmedCount: activeFindings.filter((finding) => finding.status === "confirmed").length,
     potentialCount: activeFindings.filter((finding) => finding.status === "potential").length,
     ...(baseline
