@@ -257,8 +257,10 @@ async function runTestAccountChecks(
     );
   }
 
-  const privateCandidates = discovery.endpoints.filter((endpoint) =>
-    /(?:private|account|dashboard|profile|me)(?:\/|$)/i.test(new URL(endpoint.url).pathname),
+  const privateCandidates = discovery.endpoints.filter(
+    (endpoint) =>
+      endpoint.method === "GET" &&
+      /(?:private|account|dashboard|profile|me)(?:\/|$)/i.test(new URL(endpoint.url).pathname),
   );
   let verifiedPrivate:
     { readonly endpoint: ActiveEndpoint; readonly response: SafeResponse } | undefined;
