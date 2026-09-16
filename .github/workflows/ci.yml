@@ -88,12 +88,24 @@ jobs:
           npm init -y >/dev/null
           npm install --ignore-scripts "$GITHUB_WORKSPACE"/artifacts/public/*.tgz
           node --input-type=module <<'NODE'
+          import fs from "node:fs";
           import { SPECTER_VERSION, executeLocalScan } from "@wess2001/specter";
+
+          const expectedVersion = JSON.parse(
+            fs.readFileSync(
+              process.env.GITHUB_WORKSPACE + "/packages/public/package.json",
+              "utf8",
+            ),
+          ).version;
           const report = await executeLocalScan(
             process.env.GITHUB_WORKSPACE + "/examples/secure-next",
             { offline: true, build: false },
           );
-          if (SPECTER_VERSION !== "0.1.0") throw new Error("Unexpected public package version");
+          if (SPECTER_VERSION !== expectedVersion) {
+            throw new Error(
+              `Unexpected public package version: ${SPECTER_VERSION} !== ${expectedVersion}`,
+            );
+          }
           if (report.score.value !== 100) throw new Error("Public package smoke score must be 100");
           NODE
           ./node_modules/.bin/specter version

@@ -5,7 +5,7 @@ import {
 } from "@specter-security/cli";
 import { runActiveScan as internalExecuteActiveScan } from "@specter/scanner-active";
 
-export const SPECTER_VERSION = "0.1.0" as const;
+export const SPECTER_VERSION = "0.1.1" as const;
 
 export type Severity = "info" | "low" | "medium" | "high" | "critical";
 export type FindingStatus = "open" | "resolved" | "suppressed";

@@ -6,7 +6,7 @@ on:
       version:
         description: Exact @wess2001/specter version to publish
         required: true
-        default: 0.1.0
+        default: 0.1.1
         type: string
   push:
     branches: [main]
@@ -141,7 +141,9 @@ jobs:
             offline: true,
             build: false,
           });
-          if (SPECTER_VERSION !== "0.1.0") throw new Error("Unexpected SPECTER version");
+          if (SPECTER_VERSION !== process.env.VERSION) {
+            throw new Error(`Unexpected SPECTER version: ${SPECTER_VERSION}`);
+          }
           if (report.score.value !== 100) throw new Error("Secure fixture must score 100");
           NODE
 
