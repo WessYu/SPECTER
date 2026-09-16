@@ -27,6 +27,7 @@
       "@specter/scanner-dependencies": ["packages/scanner-dependencies/src/index.ts"],
       "@specter/scanner-build": ["packages/scanner-build/src/index.ts"],
       "@specter/scanner-web": ["packages/scanner-web/src/index.ts"],
+      "@specter/scanner-active": ["packages/scanner-active/src/index.ts"],
       "@specter/risk-engine": ["packages/risk-engine/src/index.ts"],
       "@specter/reporter": ["packages/reporter/src/index.ts"],
       "@specter-security/cli": ["packages/cli/src/index.ts"]

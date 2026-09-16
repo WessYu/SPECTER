@@ -31,30 +31,40 @@ function ruleFor(finding: Finding) {
       category: finding.category,
       defaultSeverity: finding.severity,
       confidence: finding.confidence,
+      ...(finding.scanner ? { scanner: finding.scanner } : {}),
+      ...(finding.phase ? { phase: finding.phase } : {}),
     },
   };
 }
 
 function locationFor(finding: Finding) {
-  if (!finding.location?.file) return undefined;
-  return {
-    physicalLocation: {
-      artifactLocation: {
-        uri: finding.location.file.replaceAll("\\", "/"),
-        uriBaseId: "%SRCROOT%",
+  if (finding.location?.file) {
+    return {
+      physicalLocation: {
+        artifactLocation: {
+          uri: finding.location.file.replaceAll("\\", "/"),
+          uriBaseId: "%SRCROOT%",
+        },
+        ...(finding.location.line !== undefined
+          ? {
+              region: {
+                startLine: finding.location.line,
+                ...(finding.location.column !== undefined
+                  ? { startColumn: finding.location.column }
+                  : {}),
+              },
+            }
+          : {}),
       },
-      ...(finding.location.line !== undefined
-        ? {
-            region: {
-              startLine: finding.location.line,
-              ...(finding.location.column !== undefined
-                ? { startColumn: finding.location.column }
-                : {}),
-            },
-          }
-        : {}),
-    },
-  };
+    };
+  }
+  if (finding.location?.url)
+    return {
+      physicalLocation: {
+        artifactLocation: { uri: finding.location.url },
+      },
+    };
+  return undefined;
 }
 
 export function toSarif(scan: ScanResult) {
@@ -72,7 +82,9 @@ export function toSarif(scan: ScanResult) {
             rules: [...ruleMap.values()],
           },
         },
-        originalUriBaseIds: { "%SRCROOT%": { uri: "file:///" } },
+        originalUriBaseIds: {
+          "%SRCROOT%": { uri: "file:///" },
+        },
         invocations: [
           {
             executionSuccessful: scan.status === "completed",
@@ -80,20 +92,34 @@ export function toSarif(scan: ScanResult) {
             endTimeUtc: scan.completedAt,
           },
         ],
-        results: scan.findings.map((finding) => ({
-          ruleId: finding.ruleId,
-          level: sarifLevel(finding.severity),
-          message: { text: finding.description },
-          fingerprints: { "specter/v1": finding.fingerprint },
-          partialFingerprints: { primaryLocationLineHash: finding.fingerprint.slice(0, 32) },
-          ...(locationFor(finding) ? { locations: [locationFor(finding)] } : {}),
-          properties: {
-            severity: finding.severity,
-            confidence: finding.confidence,
-            category: finding.category,
-            source: finding.source,
-          },
-        })),
+        results: scan.findings.map((finding) => {
+          const location = locationFor(finding);
+          return {
+            ruleId: finding.ruleId,
+            level: sarifLevel(finding.severity),
+            message: { text: finding.description },
+            fingerprints: {
+              "specter/v1": finding.fingerprint,
+            },
+            partialFingerprints: {
+              primaryLocationLineHash: finding.fingerprint.slice(0, 32),
+            },
+            ...(location ? { locations: [location] } : {}),
+            properties: {
+              severity: finding.severity,
+              confidence: finding.confidence,
+              category: finding.category,
+              source: finding.source,
+              ...(finding.scanner ? { scanner: finding.scanner } : {}),
+              ...(finding.phase ? { phase: finding.phase } : {}),
+              ...(finding.status ? { status: finding.status } : {}),
+              ...(finding.route ? { route: finding.route } : {}),
+              ...(finding.parameter ? { parameter: finding.parameter } : {}),
+              ...(finding.method ? { method: finding.method } : {}),
+              ...(finding.reproduction ? { reproduction: finding.reproduction } : {}),
+            },
+          };
+        }),
       },
     ],
   } as const;

@@ -1,15 +1,18 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./config-loader.js";
-import type { ScanResult, Severity } from "@specter/types";
+import { defaultAuthorizationStore, runActiveScan } from "@specter/scanner-active";
+import type { ActiveProfile, ScanResult, Severity } from "@specter/types";
 import {
   compareScans,
   evaluateSecurityGate,
   executeLocalScan,
   executeRemoteScan,
+  mergeActiveScan,
   renderReport,
 } from "./scan.js";
 import type { CommandResult } from "./commands.js";
+import { startLocalPreview } from "./local-preview.js";
 
 interface ParsedScanArgs {
   readonly target?: string;
@@ -23,6 +26,9 @@ interface ParsedScanArgs {
   readonly offline: boolean;
   readonly build?: boolean;
   readonly dependencies?: boolean;
+  readonly active: boolean;
+  readonly activeProfile?: ActiveProfile;
+  readonly rules: ReadonlySet<string>;
 }
 
 function needValue(args: readonly string[], index: number, flag: string): string {
@@ -43,6 +49,10 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
   let offline = false;
   let build: boolean | undefined;
   let dependencies: boolean | undefined;
+  let active = false;
+  let activeProfile: ActiveProfile | undefined;
+  const rules = new Set<string>();
+
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--json") {
@@ -79,6 +89,25 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
       dependencies = false;
       continue;
     }
+    if (arg === "--active") {
+      active = true;
+      continue;
+    }
+    if (arg === "--active-profile") {
+      const value = needValue(args, index, arg);
+      if (value !== "safe" && value !== "standard")
+        throw new Error("--active-profile must be safe or standard.");
+      activeProfile = value;
+      active = true;
+      index += 1;
+      continue;
+    }
+    if (arg === "--rule") {
+      rules.add(needValue(args, index, arg));
+      active = true;
+      index += 1;
+      continue;
+    }
     if (arg === "--fail-on") {
       const value = needValue(args, index, arg);
       if (!["critical", "high", "medium", "low", "none"].includes(value))
@@ -109,6 +138,7 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
     if (target) throw new Error("Only one scan target may be supplied.");
     target = arg;
   }
+
   return {
     ...(target ? { target } : {}),
     format,
@@ -121,6 +151,9 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
     offline,
     ...(build !== undefined ? { build } : {}),
     ...(dependencies !== undefined ? { dependencies } : {}),
+    active,
+    ...(activeProfile ? { activeProfile } : {}),
+    rules,
   };
 }
 
@@ -163,7 +196,65 @@ async function persistReport(
   return file;
 }
 
-export async function runScanCommand(args: readonly string[], cwd: string): Promise<CommandResult> {
+function suppressions(config: Awaited<ReturnType<typeof loadConfig>>["config"]) {
+  return [
+    ...config.ignore.map((ruleId) => ({
+      ruleId,
+      reason: "Ignored by SPECTER configuration",
+    })),
+    ...config.suppressions,
+  ];
+}
+
+async function addActiveValidation(
+  base: ScanResult,
+  target: string,
+  parsed: ParsedScanArgs,
+  cwd: string,
+  config: Awaited<ReturnType<typeof loadConfig>>["config"],
+  baseline: ScanResult | undefined,
+  signal?: AbortSignal,
+): Promise<ScanResult> {
+  let preview: Awaited<ReturnType<typeof startLocalPreview>> | undefined;
+  try {
+    const activeTarget = /^https?:\/\//i.test(target)
+      ? target
+      : (preview = await startLocalPreview(path.resolve(cwd, target), signal)).url;
+
+    const active = await runActiveScan(activeTarget, {
+      config: {
+        ...config.active,
+        enabled: true,
+        profile: parsed.activeProfile ?? config.active.profile,
+      },
+      storePath: defaultAuthorizationStore(cwd),
+      ...(base.surface?.routes ? { observedRoutes: base.surface.routes } : {}),
+      ...(baseline ? { baseline } : {}),
+      ...(signal === undefined ? {} : { signal }),
+      ...(parsed.rules.size > 0 ? { rules: parsed.rules } : {}),
+      ...(process.env.SPECTER_TEST_USERNAME
+        ? {
+            testUsername: process.env.SPECTER_TEST_USERNAME,
+          }
+        : {}),
+      ...(process.env.SPECTER_TEST_PASSWORD
+        ? {
+            testPassword: process.env.SPECTER_TEST_PASSWORD,
+          }
+        : {}),
+      suppressions: suppressions(config),
+    });
+    return mergeActiveScan(base, active, baseline);
+  } finally {
+    await preview?.stop();
+  }
+}
+
+export async function runScanCommand(
+  args: readonly string[],
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<CommandResult> {
   let parsed: ParsedScanArgs;
   try {
     parsed = parseScanArgs(args);
@@ -211,7 +302,23 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
           ...(parsed.dependencies !== undefined ? { dependencies: parsed.dependencies } : {}),
           config: loadedConfig.config,
         });
+
+    if (parsed.active)
+      scan = await addActiveValidation(
+        scan,
+        target,
+        parsed,
+        cwd,
+        loadedConfig.config,
+        baseline,
+        signal,
+      );
   } catch (error: unknown) {
+    if ((error as Error).name === "AbortError")
+      return {
+        exitCode: 130,
+        stderr: "Active security test cancelled.\n",
+      };
     return {
       exitCode: 3,
       stderr: `Scan failed: ${error instanceof Error ? error.message : "Unknown scan error"}\n`,
@@ -231,6 +338,7 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
   const rendered = renderReport(scan, parsed.format);
   const withLocation =
     parsed.format === "terminal" ? `${rendered}\nReport saved:\n${saved}\n` : rendered;
+
   if (parsed.ci) {
     const gate = evaluateSecurityGate(scan, baseline, {
       failOn: parsed.failOn ?? loadedConfig.config.failOn,
@@ -240,7 +348,9 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
       return {
         exitCode: 1,
         stdout: withLocation,
-        stderr: `Security gate failed:\n${gate.failures.map((failure) => `- ${failure.message}`).join("\n")}\n`,
+        stderr: `Security gate failed:\n${gate.failures
+          .map((failure) => `- ${failure.message}`)
+          .join("\n")}\n`,
       };
   }
   return { exitCode: 0, stdout: withLocation };
@@ -249,7 +359,10 @@ export async function runScanCommand(args: readonly string[], cwd: string): Prom
 export async function runCompareCommand(args: readonly string[]): Promise<CommandResult> {
   const [previousPath, currentPath] = args;
   if (!previousPath || !currentPath || args.length !== 2)
-    return { exitCode: 2, stderr: "Usage: specter compare <previous.json> <current.json>\n" };
+    return {
+      exitCode: 2,
+      stderr: "Usage: specter compare <previous.json> <current.json>\n",
+    };
   try {
     const [previous, current] = await Promise.all([
       readScanReport(previousPath),
@@ -274,7 +387,17 @@ export async function runCompareCommand(args: readonly string[]): Promise<Comman
       ),
       "",
     ];
-    return { exitCode: 0, stdout: `${lines.join("\n")}\n` };
+    const regression =
+      diff.score.delta < 0 ||
+      diff.new.some(
+        (finding) =>
+          finding.status !== "inconclusive" &&
+          (finding.severity === "high" || finding.severity === "critical"),
+      );
+    return {
+      exitCode: regression ? 1 : 0,
+      stdout: `${lines.join("\n")}\n`,
+    };
   } catch (error: unknown) {
     return {
       exitCode: 2,

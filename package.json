@@ -16,12 +16,16 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "specter": "node packages/cli/dist/bin.js",
-    "smoke": "node scripts/validate-smoke.mjs"
+    "smoke": "node scripts/validate-smoke.mjs",
+    "test:active": "pnpm --filter @specter/scanner-active... build && pnpm --filter @specter/scanner-active test",
+    "smoke:active": "node scripts/validate-active-smoke.mjs",
+    "pack:public": "pnpm --filter @wess2001/specter pack"
   },
   "devDependencies": {
     "@eslint/js": "^9.35.0",
     "@types/node": "^22.15.0",
     "eslint": "^9.35.0",
+    "esbuild": "^0.25.9",
     "prettier": "^3.6.2",
     "turbo": "^2.5.6",
     "typescript": "^5.8.3",

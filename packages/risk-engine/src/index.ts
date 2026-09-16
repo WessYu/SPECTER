@@ -17,6 +17,7 @@ const severityWeight: Readonly<Record<Severity, number>> = {
 };
 
 const confidenceMultiplier: Readonly<Record<Confidence, number>> = {
+  confirmed: 1.18,
   high: 1,
   medium: 0.72,
   low: 0.4,
@@ -62,11 +63,25 @@ function deductionFor(finding: Finding, context: RiskContext): RiskDeduction {
     ? !context.baselineFingerprints.has(finding.fingerprint)
     : false;
   const noveltyMultiplier = isNew ? 1.12 : 1;
+  const phaseMultiplier =
+    finding.phase === "production" ? 1.12 : finding.phase === "preview" ? 1.05 : 1;
+  const scannerMultiplier = finding.scanner === "active" ? 1.12 : 1;
+  const validationMultiplier =
+    finding.status === "confirmed"
+      ? 1.12
+      : finding.status === "potential"
+        ? 0.88
+        : finding.status === "inconclusive"
+          ? 0
+          : 1;
   const raw =
     severityWeight[finding.severity] *
     confidenceMultiplier[finding.confidence] *
     categoryMultiplier[finding.category] *
-    noveltyMultiplier;
+    noveltyMultiplier *
+    phaseMultiplier *
+    scannerMultiplier *
+    validationMultiplier;
   const points = Math.min(35, Math.max(0, Math.round(raw * 10) / 10));
   return {
     ruleId: finding.ruleId,
@@ -82,7 +97,12 @@ export function calculateRiskScore(
 ): RiskScore {
   const unique = new Map<string, Finding>();
   for (const finding of findings) {
-    if (finding.status === "suppressed") continue;
+    if (
+      finding.status === "suppressed" ||
+      finding.status === "inconclusive" ||
+      finding.status === "resolved"
+    )
+      continue;
     const current = unique.get(finding.fingerprint);
     if (!current || severityWeight[finding.severity] > severityWeight[current.severity])
       unique.set(finding.fingerprint, finding);
@@ -111,5 +131,10 @@ export const riskModel = Object.freeze({
   confidenceMultiplier,
   categoryMultiplier,
   newFindingMultiplier: 1.12,
+  activeScannerMultiplier: 1.12,
+  confirmedValidationMultiplier: 1.12,
+  potentialValidationMultiplier: 0.88,
+  productionPhaseMultiplier: 1.12,
+  previewPhaseMultiplier: 1.05,
   maxSingleFindingDeduction: 35,
 });

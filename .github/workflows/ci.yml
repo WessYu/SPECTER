@@ -42,15 +42,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/specter
-        run: pnpm --filter @specter/api prisma:generate
-
       - name: Format check
         id: format
         continue-on-error: true
         run: pnpm format:check
+
+      - name: Generate Prisma client
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/specter
+        run: pnpm --filter @specter/api prisma:generate
 
       - name: Lint
         id: lint
@@ -67,15 +67,46 @@ jobs:
         continue-on-error: true
         run: pnpm test
 
+      - name: Active scanner tests
+        id: active-test
+        continue-on-error: true
+        run: pnpm test:active
+
       - name: Build
         id: build
         continue-on-error: true
         run: pnpm build
 
+      - name: Verify public package consumer
+        id: public-package
+        if: matrix.node == '20.11.1'
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts/public .tmp/specter-consumer
+          pnpm --filter @wess2001/specter pack --pack-destination "$PWD/artifacts/public"
+          cd .tmp/specter-consumer
+          npm init -y >/dev/null
+          npm install --ignore-scripts "$GITHUB_WORKSPACE"/artifacts/public/*.tgz
+          node --input-type=module <<'NODE'
+          import { SPECTER_VERSION, executeLocalScan } from "@wess2001/specter";
+          const report = await executeLocalScan(
+            process.env.GITHUB_WORKSPACE + "/examples/secure-next",
+            { offline: true, build: false },
+          );
+          if (SPECTER_VERSION !== "0.1.0") throw new Error("Unexpected public package version");
+          if (report.score.value !== 100) throw new Error("Public package smoke score must be 100");
+          NODE
+          ./node_modules/.bin/specter version
+
       - name: Portfolio smoke validation
         id: smoke
         continue-on-error: true
         run: pnpm smoke
+
+      - name: Active security smoke validation
+        id: active-smoke
+        continue-on-error: true
+        run: pnpm smoke:active
 
       - name: Verify CLI package contents
         id: package
@@ -115,20 +146,23 @@ jobs:
           LINT: ${{ steps.lint.outcome }}
           TYPECHECK: ${{ steps.typecheck.outcome }}
           TEST: ${{ steps.test.outcome }}
+          ACTIVE_TEST: ${{ steps.active-test.outcome }}
           BUILD: ${{ steps.build.outcome }}
           SMOKE: ${{ steps.smoke.outcome }}
+          ACTIVE_SMOKE: ${{ steps.active-smoke.outcome }}
           PACKAGE: ${{ steps.package.outcome }}
           ACTION_SMOKE: ${{ steps.action-smoke.outcome }}
+          PUBLIC_PACKAGE: ${{ steps.public-package.outcome }}
         run: |
-          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nbuild=%s\nsmoke=%s\npackage=%s\naction-smoke=%s\n' \
-            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE" "$PACKAGE" "$ACTION_SMOKE"
-          for outcome in "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$BUILD" "$SMOKE"; do
+          printf 'format=%s\nlint=%s\ntypecheck=%s\ntest=%s\nactive-test=%s\nbuild=%s\nsmoke=%s\nactive-smoke=%s\npackage=%s\naction-smoke=%s\npublic-package=%s\n' \
+            "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$ACTIVE_TEST" "$BUILD" "$SMOKE" "$ACTIVE_SMOKE" "$PACKAGE" "$ACTION_SMOKE" "$PUBLIC_PACKAGE"
+          for outcome in "$FORMAT" "$LINT" "$TYPECHECK" "$TEST" "$ACTIVE_TEST" "$BUILD" "$SMOKE" "$ACTIVE_SMOKE"; do
             if [ "$outcome" != "success" ]; then
               exit 1
             fi
           done
           if [ "${{ matrix.node }}" = "20.11.1" ]; then
-            if [ "$PACKAGE" != "success" ] || [ "$ACTION_SMOKE" != "success" ]; then
+            if [ "$PACKAGE" != "success" ] || [ "$ACTION_SMOKE" != "success" ] || [ "$PUBLIC_PACKAGE" != "success" ]; then
               exit 1
             fi
           fi
@@ -159,6 +193,9 @@ jobs:
 
       - name: Portfolio smoke validation
         run: npx --yes pnpm@10.17.1 smoke
+
+      - name: Active security smoke validation
+        run: npx --yes pnpm@10.17.1 smoke:active
 
   database-integration:
     name: PostgreSQL API integration
@@ -204,6 +241,9 @@ jobs:
         run: |
           pnpm --filter @specter/types build
           pnpm --filter @specter/core build
+          pnpm --filter @specter/config build
+          pnpm --filter @specter/risk-engine build
           pnpm --filter @specter/scanner-web build
+          pnpm --filter @specter/scanner-active build
       - name: Run API integration tests
         run: pnpm --filter @specter/api test

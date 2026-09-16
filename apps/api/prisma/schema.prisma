@@ -90,6 +90,9 @@ model Project {
   routes         Route[]
   deployments    Deployment[]
   integrations   Integration[]
+  activeTargets  ActiveTarget[]
+  activeScans    ActiveScan[]
+  activeAuditLogs ActiveAuditLog[]
   @@unique([organizationId, slug])
   @@index([organizationId])
 }
@@ -134,11 +137,20 @@ model Scan {
   startedAt      DateTime
   completedAt    DateTime
   durationMs     Int
+  scanType       String?
+  authorizationJson Json?
+  profile        String?
+  budgetJson     Json?
+  endpointCount  Int?
+  confirmedCount Int?
+  potentialCount Int?
+  regressionDelta Float?
   createdAt      DateTime             @default(now())
   project        Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
   occurrences    FindingOccurrence[]
   externalDomains ExternalDomain[]
   routes         Route[]
+  activeExecution ActiveScan?
   @@index([projectId, completedAt(sort: Desc)])
   @@index([projectId, score])
 }
@@ -154,6 +166,14 @@ model Finding {
   category       String
   confidence     String
   source         String
+  scanner        String?
+  phase          String?
+  validationStatus String?
+  method         String?
+  route          String?
+  parameter      String?
+  reproduction   String?
+  whyItMatters   String?
   remediation    String?
   documentationUrl String?
   firstDetectedAt DateTime
@@ -249,6 +269,70 @@ model Integration {
   updatedAt      DateTime             @updatedAt
   project        Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
   @@index([projectId])
+}
+
+model ActiveTarget {
+  id                     String           @id @default(cuid())
+  projectId              String
+  url                    String
+  hostname               String
+  authorizationStatus    String           @default("unverified")
+  tokenHash              String?
+  tokenPrefix            String?
+  verificationExpiresAt  DateTime?
+  verifiedAt             DateTime?
+  authorizationExpiresAt DateTime?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  project                Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scans                   ActiveScan[]
+  auditLogs               ActiveAuditLog[]
+  @@unique([projectId, url])
+  @@index([projectId, authorizationStatus])
+  @@index([hostname])
+}
+
+model ActiveScan {
+  id             String          @id @default(cuid())
+  projectId      String
+  targetId       String
+  status         ScanStatus      @default(queued)
+  profile        String
+  requestBudget  Int
+  requestCount   Int             @default(0)
+  endpointCount  Int             @default(0)
+  findingCount   Int             @default(0)
+  confirmedCount Int             @default(0)
+  score          Float?
+  resultScanId   String?         @unique
+  startedAt      DateTime?
+  completedAt    DateTime?
+  error          String?
+  createdBy      String
+  createdAt      DateTime        @default(now())
+  project        Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  target         ActiveTarget    @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  resultScan     Scan?           @relation(fields: [resultScanId], references: [id], onDelete: SetNull)
+  auditLogs      ActiveAuditLog[]
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([targetId, createdAt(sort: Desc)])
+  @@index([projectId, status])
+}
+
+model ActiveAuditLog {
+  id           String        @id @default(cuid())
+  projectId    String
+  targetId     String?
+  activeScanId String?
+  principalId  String
+  action       String
+  metadataJson Json?
+  createdAt    DateTime      @default(now())
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  target       ActiveTarget? @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  activeScan   ActiveScan?   @relation(fields: [activeScanId], references: [id], onDelete: SetNull)
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([activeScanId])
 }
 
 model ApiKey {

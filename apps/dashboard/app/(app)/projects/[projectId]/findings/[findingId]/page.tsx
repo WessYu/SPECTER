@@ -48,6 +48,12 @@ export default async function FindingDetailPage({
             <p className="subtle">Evidence is displayed only after server-side redaction.</p>
             <pre className="evidence">{evidence(latest?.evidenceJson)}</pre>
           </section>
+          {finding.whyItMatters ? (
+            <section className="section">
+              <h2>Why it matters</h2>
+              <p className="subtle">{finding.whyItMatters}</p>
+            </section>
+          ) : null}
           <section className="section">
             <h2>Remediation</h2>
             <p className="subtle">
@@ -65,10 +71,20 @@ export default async function FindingDetailPage({
             <dd>{finding.confidence}</dd>
             <dt>Category</dt>
             <dd>{finding.category}</dd>
-            <dt>Source</dt>
-            <dd className="mono">{finding.source}</dd>
-            <dt>Status</dt>
+            <dt>Scanner</dt>
+            <dd className="mono">{finding.scanner ?? finding.source}</dd>
+            <dt>Phase</dt>
+            <dd>{finding.phase ?? "—"}</dd>
+            <dt>Route</dt>
+            <dd className="mono">{finding.route ?? latest?.url ?? "—"}</dd>
+            <dt>Parameter</dt>
+            <dd className="mono">{finding.parameter ?? "—"}</dd>
+            <dt>Validation status</dt>
+            <dd>{finding.validationStatus ?? "heuristic"}</dd>
+            <dt>Lifecycle</dt>
             <dd>{finding.status}</dd>
+            <dt>Regression status</dt>
+            <dd>{finding.firstDetectedAt === finding.lastDetectedAt ? "NEW" : "EXISTING"}</dd>
             <dt>First detected</dt>
             <dd>{formatDate(finding.firstDetectedAt)}</dd>
             <dt>Last detected</dt>
@@ -81,6 +97,8 @@ export default async function FindingDetailPage({
             </dd>
             <dt>Fingerprint</dt>
             <dd className="mono">{finding.fingerprint ?? "—"}</dd>
+            <dt>Safe reproduction</dt>
+            <dd className="mono">{finding.reproduction ?? "—"}</dd>
           </dl>
         </aside>
       </div>

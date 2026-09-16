@@ -40,6 +40,16 @@ function isPrivateIpv6(value: string): boolean {
   return mapped?.[1] ? isPrivateIpv4(mapped[1]) : false;
 }
 
+export function isLoopbackIp(address: string): boolean {
+  const family = isIP(address);
+  if (family === 4) {
+    const octets = parseIpv4(address);
+    return octets?.[0] === 127;
+  }
+  if (family === 6) return normalizeIpv6(address) === "::1";
+  return false;
+}
+
 export function isBlockedIp(address: string): boolean {
   const family = isIP(address);
   if (family === 4) return isPrivateIpv4(address);

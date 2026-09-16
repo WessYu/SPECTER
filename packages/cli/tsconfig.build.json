@@ -13,7 +13,8 @@
       "@specter/risk-engine": ["packages/risk-engine/dist/index.d.ts"],
       "@specter/reporter": ["packages/reporter/dist/index.d.ts"],
       "@specter/scanner-build": ["packages/scanner-build/dist/index.d.ts"],
-      "@specter/scanner-web": ["packages/scanner-web/dist/index.d.ts"]
+      "@specter/scanner-web": ["packages/scanner-web/dist/index.d.ts"],
+      "@specter/scanner-active": ["packages/scanner-active/dist/index.d.ts"]
     },
     "sourceMap": false,
     "declarationMap": false,

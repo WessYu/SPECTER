@@ -257,8 +257,14 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
   if (format === "sarif") return serializeSarif(scan);
   const counts = scan.summary;
   const lines = [
-    scan.target.kind === "url" ? "SPECTER LIVE" : "SPECTER",
-    "Application security from source to production.",
+    scan.scanType === "active"
+      ? "SPECTER LIVE + ACTIVE"
+      : scan.target.kind === "url"
+        ? "SPECTER LIVE"
+        : "SPECTER",
+    scan.scanType === "active"
+      ? "AUTHORIZED ACTIVE TEST"
+      : "Application security from source to production.",
     "",
     "Target",
     scan.target.value,
@@ -269,6 +275,19 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
         `${module.status === "passed" ? "✓" : module.status === "warning" ? "!" : module.status === "skipped" ? "-" : "x"} ${module.name} (${module.findingCount})`,
     ),
     "",
+    ...(scan.authorization
+      ? [
+          "Authorization",
+          scan.authorization.status.toUpperCase(),
+          "",
+          "Active Profile",
+          (scan.profile ?? "safe").toUpperCase(),
+          "",
+          "Active Requests",
+          `${scan.budget?.used ?? 0} / ${scan.budget?.max ?? 0}`,
+          "",
+        ]
+      : []),
     "Security Score",
     `${scan.score.value}/100`,
     "",
@@ -287,6 +306,63 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
       ...scan.errors.map((error) => `- ${error.code}: ${error.message}`),
     );
   return `${lines.join("\n")}\n`;
+}
+
+export function mergeActiveScan(
+  base: ScanResult,
+  active: ScanResult,
+  baseline?: ScanResult,
+): ScanResult {
+  const findings = deduplicate([...base.findings, ...active.findings]);
+  const baselineFingerprints = baseline
+    ? new Set(baseline.findings.map((finding) => finding.fingerprint))
+    : undefined;
+  const score = calculateRiskScore(findings, baselineFingerprints ? { baselineFingerprints } : {});
+  const activeFindings = findings.filter((finding) => finding.scanner === "active");
+  return {
+    ...base,
+    scanId: randomUUID(),
+    startedAt:
+      Date.parse(base.startedAt) <= Date.parse(active.startedAt)
+        ? base.startedAt
+        : active.startedAt,
+    completedAt:
+      Date.parse(base.completedAt) >= Date.parse(active.completedAt)
+        ? base.completedAt
+        : active.completedAt,
+    durationMs:
+      Math.max(Date.parse(base.completedAt), Date.parse(active.completedAt)) -
+      Math.min(Date.parse(base.startedAt), Date.parse(active.startedAt)),
+    status:
+      base.status === "completed" && active.status === "completed" ? "completed" : active.status,
+    scanType: "active",
+    ...(active.authorization === undefined ? {} : { authorization: active.authorization }),
+    ...(active.profile === undefined ? {} : { profile: active.profile }),
+    ...(active.budget === undefined ? {} : { budget: active.budget }),
+    ...(active.endpointCount === undefined ? {} : { endpointCount: active.endpointCount }),
+    confirmedCount: activeFindings.filter((finding) => finding.status === "confirmed").length,
+    potentialCount: activeFindings.filter((finding) => finding.status === "potential").length,
+    ...(baseline
+      ? {
+          regressionDelta: Math.round((score.value - baseline.score.value) * 10) / 10,
+        }
+      : {}),
+    score,
+    summary: summarizeSeverity(findings.filter((finding) => finding.status !== "suppressed")),
+    findings,
+    modules: [...base.modules, ...active.modules],
+    errors: [...base.errors, ...active.errors],
+    surface: {
+      routes: [...(base.surface?.routes ?? []), ...(active.surface?.routes ?? [])].filter(
+        (route, index, all) =>
+          all.findIndex(
+            (candidate) => candidate.method === route.method && candidate.url === route.url,
+          ) === index,
+      ),
+      externalDomains: base.surface?.externalDomains ?? [],
+      ...(base.surface?.removedDomains ? { removedDomains: base.surface.removedDomains } : {}),
+    },
+  };
 }
 
 export { compareScans, evaluateSecurityGate };

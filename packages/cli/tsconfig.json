@@ -16,6 +16,7 @@
     "../risk-engine/src/**/*.ts",
     "../reporter/src/**/*.ts",
     "../scanner-build/src/**/*.ts",
-    "../scanner-web/src/**/*.ts"
+    "../scanner-web/src/**/*.ts",
+    "../scanner-active/src/**/*.ts"
   ]
 }

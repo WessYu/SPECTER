@@ -1,0 +1,57 @@
+{
+  "name": "@wess2001/specter",
+  "version": "0.1.0",
+  "description": "Defensive application security from source to production.",
+  "type": "module",
+  "bin": {
+    "specter": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ../../scripts/build-public-package.mjs && tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --max-warnings=0"
+  },
+  "devDependencies": {
+    "@specter-security/cli": "workspace:*",
+    "@specter/scanner-active": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "license": "MIT",
+  "author": "WessYu",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WessYu/SPECTER.git"
+  },
+  "homepage": "https://github.com/WessYu/SPECTER#readme",
+  "bugs": {
+    "url": "https://github.com/WessYu/SPECTER/issues"
+  },
+  "keywords": [
+    "application-security",
+    "appsec",
+    "devsecops",
+    "security-scanner",
+    "javascript",
+    "typescript",
+    "sarif",
+    "ci"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
