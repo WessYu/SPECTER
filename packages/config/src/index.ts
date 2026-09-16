@@ -40,7 +40,7 @@ export interface SpecterConfig {
   };
 }
 
-export const defaultConfig: SpecterConfig = Object.freeze({
+export const defaultConfig = Object.freeze<SpecterConfig>({
   failOn: "high",
   maxScoreDrop: 5,
   ignore: [],
