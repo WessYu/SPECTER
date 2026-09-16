@@ -16,6 +16,9 @@ importers:
       eslint:
         specifier: ^9.35.0
         version: 9.39.5(jiti@2.7.0)
+      esbuild:
+        specifier: ^0.25.9
+        version: 0.25.12
       prettier:
         specifier: ^3.6.2
         version: 3.9.6
@@ -160,6 +163,15 @@ importers:
       "@specter/types":
         specifier: workspace:*
         version: link:../types
+
+  packages/public:
+    devDependencies:
+      "@specter-security/cli":
+        specifier: workspace:*
+        version: link:../cli
+      "@specter/scanner-active":
+        specifier: workspace:*
+        version: link:../scanner-active
 
   packages/reporter:
     dependencies:
