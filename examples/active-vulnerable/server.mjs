@@ -26,18 +26,13 @@ function body(request) {
       }
       chunks.push(chunk);
     });
-    request.on("end", () =>
-      resolve(Buffer.concat(chunks).toString("utf8")),
-    );
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     request.on("error", reject);
   });
 }
 
 const server = http.createServer(async (request, response) => {
-  const url = new URL(
-    request.url || "/",
-    `http://${request.headers.host || "localhost"}`,
-  );
+  const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, {
@@ -52,9 +47,7 @@ const server = http.createServer(async (request, response) => {
     request.headers.forwarded?.includes("specter.invalid")
   ) {
     response.writeHead(200, headers());
-    response.end(
-      `<p>canonical=https://specter.invalid${url.pathname}</p>`,
-    );
+    response.end(`<p>canonical=https://specter.invalid${url.pathname}</p>`);
     return;
   }
 
@@ -125,9 +118,7 @@ const server = http.createServer(async (request, response) => {
     const origin = request.headers.origin;
     response.writeHead(200, {
       "content-type": "application/json",
-      ...(typeof origin === "string"
-        ? { "access-control-allow-origin": origin }
-        : {}),
+      ...(typeof origin === "string" ? { "access-control-allow-origin": origin } : {}),
       "access-control-allow-credentials": "true",
     });
     response.end(JSON.stringify({ ok: true }));
@@ -141,8 +132,7 @@ const server = http.createServer(async (request, response) => {
     response.end(
       JSON.stringify({
         error: "PrismaClientKnownRequestError",
-        stack:
-          "Error: failed\n    at handler (/srv/specter-fixture/src/api.ts:42:9)",
+        stack: "Error: failed\n    at handler (/srv/specter-fixture/src/api.ts:42:9)",
         path: "/srv/specter-fixture/src/api.ts",
       }),
     );

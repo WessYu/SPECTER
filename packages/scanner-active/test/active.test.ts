@@ -40,10 +40,7 @@ const config: ActiveScannerConfig = {
 async function fixtureServer(): Promise<string> {
   const fixedSession = "fixed-session";
   const server = http.createServer((request, response) => {
-    const url = new URL(
-      request.url ?? "/",
-      `http://${request.headers.host ?? "localhost"}`,
-    );
+    const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
 
     if (request.method === "OPTIONS") {
       response.writeHead(204, {
@@ -53,9 +50,7 @@ async function fixtureServer(): Promise<string> {
       return;
     }
 
-    if (
-      request.headers["x-forwarded-host"] === "specter.invalid"
-    ) {
+    if (request.headers["x-forwarded-host"] === "specter.invalid") {
       response.writeHead(200, {
         "content-type": "text/html",
       });
@@ -106,9 +101,7 @@ document.querySelector("#o").innerHTML = p.get("q");
       const origin = request.headers.origin;
       response.writeHead(200, {
         "content-type": "application/json",
-        ...(typeof origin === "string"
-          ? { "access-control-allow-origin": origin }
-          : {}),
+        ...(typeof origin === "string" ? { "access-control-allow-origin": origin } : {}),
         "access-control-allow-credentials": "true",
       });
       response.end('{"ok":true}');
@@ -154,19 +147,17 @@ document.querySelector("#o").innerHTML = p.get("q");
     response.end("not found");
   });
 
-  const address = await new Promise<{ port: number }>(
-    (resolve, reject) => {
-      server.once("error", reject);
-      server.listen(0, "127.0.0.1", () => {
-        const bound = server.address();
-        if (!bound || typeof bound === "string") {
-          reject(new Error("invalid test address"));
-          return;
-        }
-        resolve({ port: bound.port });
-      });
-    },
-  );
+  const address = await new Promise<{ port: number }>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const bound = server.address();
+      if (!bound || typeof bound === "string") {
+        reject(new Error("invalid test address"));
+        return;
+      }
+      resolve({ port: bound.port });
+    });
+  });
   cleanups.push(
     () =>
       new Promise<void>((resolve) => {
@@ -178,9 +169,7 @@ document.querySelector("#o").innerHTML = p.get("q");
 
 describe("active authorization", () => {
   it("automatically authorizes localhost only", async () => {
-    const dir = await mkdtemp(
-      path.join(os.tmpdir(), "specter-active-"),
-    );
+    const dir = await mkdtemp(path.join(os.tmpdir(), "specter-active-"));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     const auth = await resolveActiveAuthorization(
       "http://127.0.0.1:3000",
@@ -191,32 +180,19 @@ describe("active authorization", () => {
   });
 
   it("refuses an unverified remote hostname before scanning", async () => {
-    const dir = await mkdtemp(
-      path.join(os.tmpdir(), "specter-active-"),
-    );
+    const dir = await mkdtemp(path.join(os.tmpdir(), "specter-active-"));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     await expect(
-      resolveActiveAuthorization(
-        "https://example.com",
-        path.join(dir, "auth.json"),
-        [],
-      ),
+      resolveActiveAuthorization("https://example.com", path.join(dir, "auth.json"), []),
     ).rejects.toBeInstanceOf(ActiveAuthorizationError);
   });
 
   it("generates a random verification token without persisting it in plaintext", async () => {
-    const dir = await mkdtemp(
-      path.join(os.tmpdir(), "specter-active-"),
-    );
+    const dir = await mkdtemp(path.join(os.tmpdir(), "specter-active-"));
     cleanups.push(() => rm(dir, { recursive: true, force: true }));
     const store = path.join(dir, "auth.json");
-    const generated = await generateDomainAuthorization(
-      "https://example.com",
-      store,
-    );
-    expect(generated.content).toMatch(
-      /^specter-verification=[a-f0-9]{48}$/,
-    );
+    const generated = await generateDomainAuthorization("https://example.com", store);
+    expect(generated.content).toMatch(/^specter-verification=[a-f0-9]{48}$/);
     const persisted = await readFile(store, "utf8");
     expect(persisted).not.toContain(generated.token);
     expect(persisted).toContain("tokenHash");
@@ -228,9 +204,7 @@ describe("request budget and cancellation", () => {
     const budget = new ActiveRequestBudget(2, 100);
     await budget.consume();
     await budget.consume();
-    await expect(budget.consume()).rejects.toThrow(
-      "budget exhausted",
-    );
+    await expect(budget.consume()).rejects.toThrow("budget exhausted");
     expect(budget.used).toBe(2);
   });
 
@@ -238,9 +212,7 @@ describe("request budget and cancellation", () => {
     const controller = new AbortController();
     controller.abort();
     const budget = new ActiveRequestBudget(5, 100);
-    await expect(
-      budget.consume(controller.signal),
-    ).rejects.toMatchObject({ name: "AbortError" });
+    await expect(budget.consume(controller.signal)).rejects.toMatchObject({ name: "AbortError" });
     expect(budget.used).toBe(0);
   });
 });
@@ -256,24 +228,18 @@ describe("endpoint discovery", () => {
         headers: {
           "content-type": "text/html",
         },
-        body:
-          url.endsWith("sitemap.xml")
-            ? "<urlset></urlset>"
-            : '<a href="/known?q=1">known</a><form action="/login" method="post"><input name="username"><input name="password" type="password"></form>',
+        body: url.endsWith("sitemap.xml")
+          ? "<urlset></urlset>"
+          : '<a href="/known?q=1">known</a><form action="/login" method="post"><input name="username"><input name="password" type="password"></form>',
         bytes: 0,
         redirects: [],
       } as const;
     };
-    const result = await discoverActiveSurface(
-      "https://example.com/",
-      request,
-      { ...config, maxEndpoints: 5 },
-    );
-    expect(
-      result.endpoints.some(
-        (item) => new URL(item.url).pathname === "/known",
-      ),
-    ).toBe(true);
+    const result = await discoverActiveSurface("https://example.com/", request, {
+      ...config,
+      maxEndpoints: 5,
+    });
+    expect(result.endpoints.some((item) => new URL(item.url).pathname === "/known")).toBe(true);
     expect(requested).not.toContain("/admin");
     expect(requested).not.toContain("/.git");
   });
@@ -287,9 +253,7 @@ describe("active validations", () => {
       testUsername: "specter-test",
       testPassword: "never-reported",
     });
-    const rules = new Set(
-      result.findings.map((finding) => finding.ruleId),
-    );
+    const rules = new Set(result.findings.map((finding) => finding.ruleId));
 
     expect(rules).toContain("SPECTER-ACTIVE-REFLECTION-001");
     expect(rules).toContain("SPECTER-ACTIVE-DOM-001");
@@ -303,14 +267,9 @@ describe("active validations", () => {
     expect(rules).toContain("SPECTER-ACTIVE-SESSION-002");
     expect(rules).toContain("SPECTER-ACTIVE-CACHE-001");
 
-    const csrf = result.findings.find(
-      (finding) =>
-        finding.ruleId === "SPECTER-ACTIVE-CSRF-001",
-    );
+    const csrf = result.findings.find((finding) => finding.ruleId === "SPECTER-ACTIVE-CSRF-001");
     expect(csrf?.status).toBe("inconclusive");
-    expect(result.budget?.used).toBeLessThanOrEqual(
-      config.maxRequests,
-    );
+    expect(result.budget?.used).toBeLessThanOrEqual(config.maxRequests);
     expect(result.score.value).toBeGreaterThanOrEqual(0);
     expect(result.score.value).toBeLessThanOrEqual(100);
   });
@@ -320,12 +279,10 @@ describe("active validations", () => {
     const first = await runActiveScan(target, { config });
     const second = await runActiveScan(target, { config });
     const one = first.findings.find(
-      (finding) =>
-        finding.ruleId === "SPECTER-ACTIVE-REFLECTION-001",
+      (finding) => finding.ruleId === "SPECTER-ACTIVE-REFLECTION-001",
     );
     const two = second.findings.find(
-      (finding) =>
-        finding.ruleId === "SPECTER-ACTIVE-REFLECTION-001",
+      (finding) => finding.ruleId === "SPECTER-ACTIVE-REFLECTION-001",
     );
     expect(one?.fingerprint).toBe(two?.fingerprint);
   });

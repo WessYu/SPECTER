@@ -1,10 +1,6 @@
 import { loadConfig } from "./config-loader.js";
 import { doctor, initConfig, type CommandResult } from "./commands.js";
-import {
-  runAuthorizeCommand,
-  runPentestCommand,
-  runVerifyCommand,
-} from "./active-command.js";
+import { runAuthorizeCommand, runPentestCommand, runVerifyCommand } from "./active-command.js";
 import { runCompareCommand, runScanCommand } from "./scan-command.js";
 
 export const CLI_VERSION = "0.1.0";
@@ -31,8 +27,7 @@ function paint(text: string, code: string, enabled: boolean): string {
 
 function supportsColor(): boolean {
   if (process.env.NO_COLOR !== undefined) return false;
-  if (process.env.FORCE_COLOR !== undefined)
-    return process.env.FORCE_COLOR !== "0";
+  if (process.env.FORCE_COLOR !== undefined) return process.env.FORCE_COLOR !== "0";
   return Boolean(process.stdout.isTTY);
 }
 
@@ -63,11 +58,7 @@ function renderHelp(): string {
     "                  ╵",
   ];
 
-  const logo = [
-    "┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓",
-    "┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛",
-    "┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸",
-  ];
+  const logo = ["┏━┓┏━┓┏━╸┏━╸╺┳╸┏━╸┏━┓", "┗━┓┣━┛┣╸ ┃   ┃ ┣╸ ┣┳┛", "┗━┛╹  ┗━╸┗━╸ ╹ ┗━╸╹┗╸"];
 
   const command = (syntax: string, description: string): string =>
     `${mint(syntax.padEnd(34))}${muted(description)}`;
@@ -79,14 +70,8 @@ function renderHelp(): string {
     dim(ice("Application security from source to production.")),
     "",
     `${cyan(bold("COMMANDS"))} ${cyan("────────────────────────────────────────")}`,
-    command(
-      "specter scan [path|url]",
-      "scan source, build or a published app",
-    ),
-    command(
-      "specter compare <old> <new>",
-      "compare two SPECTER reports",
-    ),
+    command("specter scan [path|url]", "scan source, build or a published app"),
+    command("specter compare <old> <new>", "compare two SPECTER reports"),
     command("specter doctor", "check the local environment"),
     command("specter init", "create specter.config.ts"),
     command("specter config", "print the resolved configuration"),
@@ -94,23 +79,12 @@ function renderHelp(): string {
     command("specter help", "show this screen"),
     "",
     `${cyan(bold("ACTIVE SECURITY"))} ${cyan("─────────────────────────────────")}`,
-    command(
-      "specter pentest <path|url>",
-      "run an authorized active security assessment",
-    ),
-    command(
-      "specter authorize <url>",
-      "generate domain verification",
-    ),
-    command(
-      "specter verify <url>",
-      "verify permission for active testing",
-    ),
+    command("specter pentest <path|url>", "run an authorized active security assessment"),
+    command("specter authorize <url>", "generate domain verification"),
+    command("specter verify <url>", "verify permission for active testing"),
     "",
     `${cyan(bold("COMMON FLAGS"))} ${cyan("────────────────────────────────────")}`,
-    ice(
-      "--json  --sarif  --ci  --baseline <report>  --output <path>",
-    ),
+    ice("--json  --sarif  --ci  --baseline <report>  --output <path>"),
     ice("--active  --active-profile safe|standard  --rule <id>"),
   ];
 
@@ -121,9 +95,7 @@ function renderHelp(): string {
     return [
       ...help.slice(0, 4),
       "",
-      ...ghost.map((line, index) =>
-        index < 8 ? cyan(line) : mint(line),
-      ),
+      ...ghost.map((line, index) => (index < 8 ? cyan(line) : mint(line))),
       "",
       ...help.slice(5),
       "",
@@ -135,8 +107,7 @@ function renderHelp(): string {
     Array.from({ length: rows }, (_, index) => {
       const rawGhost = ghost[index] ?? "";
       const left = rawGhost.padEnd(ghostWidth);
-      const coloredGhost =
-        index < 8 ? cyan(left) : mint(left);
+      const coloredGhost = index < 8 ? cyan(left) : mint(left);
       const divider = cyan("│");
       const right = help[index] ?? "";
       return `${coloredGhost}  ${divider}  ${right}`.trimEnd();
@@ -146,14 +117,10 @@ function renderHelp(): string {
 
 export async function runCli(io: CliIo): Promise<CommandResult> {
   const [command = "help", ...rest] = io.args;
-  if (command === "scan")
-    return runScanCommand(rest, io.cwd, io.signal);
-  if (command === "pentest")
-    return runPentestCommand(rest, io.cwd, io.signal);
-  if (command === "authorize")
-    return runAuthorizeCommand(rest, io.cwd);
-  if (command === "verify")
-    return runVerifyCommand(rest, io.cwd);
+  if (command === "scan") return runScanCommand(rest, io.cwd, io.signal);
+  if (command === "pentest") return runPentestCommand(rest, io.cwd, io.signal);
+  if (command === "authorize") return runAuthorizeCommand(rest, io.cwd);
+  if (command === "verify") return runVerifyCommand(rest, io.cwd);
   if (command === "compare") return runCompareCommand(rest);
   if (command === "doctor") return doctor(io.cwd);
   if (command === "init") return initConfig(io.cwd);
@@ -178,17 +145,9 @@ export async function runCli(io: CliIo): Promise<CommandResult> {
       };
     }
   }
-  if (
-    command === "version" ||
-    command === "--version" ||
-    command === "-v"
-  )
+  if (command === "version" || command === "--version" || command === "-v")
     return { exitCode: 0, stdout: `${CLI_VERSION}\n` };
-  if (
-    command === "help" ||
-    command === "--help" ||
-    command === "-h"
-  )
+  if (command === "help" || command === "--help" || command === "-h")
     return { exitCode: 0, stdout: renderHelp() };
   return {
     exitCode: 2,

@@ -42,8 +42,7 @@ export function activeFinding(input: ActiveFindingInput): Finding {
     location: { url: input.route },
     evidence: redactEvidence(input.evidence),
     discriminator:
-      input.discriminator ??
-      `${input.method ?? "GET"}:${input.route}:${input.parameter ?? ""}`,
+      input.discriminator ?? `${input.method ?? "GET"}:${input.route}:${input.parameter ?? ""}`,
     severity: input.severity,
     confidence,
   });

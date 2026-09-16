@@ -46,9 +46,7 @@ function body(request) {
       }
       chunks.push(chunk);
     });
-    request.on("end", () =>
-      resolve(Buffer.concat(chunks).toString("utf8")),
-    );
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
     request.on("error", reject);
   });
 }
@@ -58,10 +56,7 @@ function sessionCookie(value) {
 }
 
 const server = http.createServer(async (request, response) => {
-  const url = new URL(
-    request.url || "/",
-    `http://${request.headers.host || "localhost"}`,
-  );
+  const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
   if (
     request.headers.host === "specter.invalid" ||
@@ -74,10 +69,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (request.method === "OPTIONS") {
-    response.writeHead(
-      204,
-      commonHeaders({ allow: "GET, HEAD, OPTIONS" }),
-    );
+    response.writeHead(204, commonHeaders({ allow: "GET, HEAD, OPTIONS" }));
     response.end();
     return;
   }
@@ -118,9 +110,7 @@ const server = http.createServer(async (request, response) => {
         "content-type": "text/html; charset=utf-8",
       }),
     );
-    response.end(
-      "<!doctype html><html><body><div id=\"output\">safe</div></body></html>",
-    );
+    response.end('<!doctype html><html><body><div id="output">safe</div></body></html>');
     return;
   }
 
@@ -140,13 +130,8 @@ const server = http.createServer(async (request, response) => {
       response.end("invalid redirect");
       return;
     }
-    const destination = requested.startsWith("/")
-      ? requested
-      : "/";
-    response.writeHead(
-      302,
-      commonHeaders({ location: destination }),
-    );
+    const destination = requested.startsWith("/") ? requested : "/";
+    response.writeHead(302, commonHeaders({ location: destination }));
     response.end();
     return;
   }
@@ -158,8 +143,7 @@ const server = http.createServer(async (request, response) => {
       jsonHeaders({
         ...(origin === "https://trusted.example"
           ? {
-              "access-control-allow-origin":
-                "https://trusted.example",
+              "access-control-allow-origin": "https://trusted.example",
             }
           : {}),
       }),
@@ -182,10 +166,7 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/login" && request.method === "POST") {
     await body(request);
     const sid = `auth-${randomBytes(12).toString("hex")}`;
-    response.writeHead(
-      204,
-      commonHeaders({ "set-cookie": sessionCookie(sid) }),
-    );
+    response.writeHead(204, commonHeaders({ "set-cookie": sessionCookie(sid) }));
     response.end();
     return;
   }
@@ -197,8 +178,7 @@ const server = http.createServer(async (request, response) => {
     response.writeHead(
       204,
       commonHeaders({
-        "set-cookie":
-          "sid=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
+        "set-cookie": "sid=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0",
       }),
     );
     response.end();
@@ -208,17 +188,11 @@ const server = http.createServer(async (request, response) => {
   if (url.pathname === "/api/private") {
     const sid = parseCookie(request, "sid");
     if (!sid?.startsWith("auth-") || revoked.has(sid)) {
-      response.writeHead(
-        401,
-        jsonHeaders({ "cache-control": "no-store" }),
-      );
+      response.writeHead(401, jsonHeaders({ "cache-control": "no-store" }));
       response.end(JSON.stringify({ error: "unauthorized" }));
       return;
     }
-    response.writeHead(
-      200,
-      jsonHeaders({ "cache-control": "no-store" }),
-    );
+    response.writeHead(200, jsonHeaders({ "cache-control": "no-store" }));
     response.end(JSON.stringify({ account: "test-account" }));
     return;
   }

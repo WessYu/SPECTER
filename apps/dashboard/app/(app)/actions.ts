@@ -113,18 +113,14 @@ export interface ActiveVerificationState {
   readonly error?: string;
 }
 
-async function createActiveVerification(
-  targetId: string,
-): Promise<{
+async function createActiveVerification(targetId: string): Promise<{
   readonly token: string;
   readonly content: string;
   readonly httpPath: string;
 }> {
-  return apiJson(
-    `/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`,
-    "POST",
-    { action: "create" },
-  );
+  return apiJson(`/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`, "POST", {
+    action: "create",
+  });
 }
 
 export async function createActiveTarget(
@@ -163,8 +159,7 @@ export async function generateActiveVerification(
 ): Promise<ActiveVerificationState> {
   const projectId = text(formData, "projectId");
   const targetId = text(formData, "targetId");
-  if (!projectId || !targetId)
-    return { error: "Target information is missing." };
+  if (!projectId || !targetId) return { error: "Target information is missing." };
   try {
     const verification = await createActiveVerification(targetId);
     revalidatePath(`/projects/${projectId}/active-security`);
@@ -188,14 +183,11 @@ export async function verifyActiveTarget(
 ): Promise<ActiveVerificationState> {
   const projectId = text(formData, "projectId");
   const targetId = text(formData, "targetId");
-  if (!projectId || !targetId)
-    return { error: "Target information is missing." };
+  if (!projectId || !targetId) return { error: "Target information is missing." };
   try {
-    await apiJson(
-      `/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`,
-      "POST",
-      { action: "check" },
-    );
+    await apiJson(`/api/v1/active-targets/${encodeURIComponent(targetId)}/verification`, "POST", {
+      action: "check",
+    });
     revalidatePath(`/projects/${projectId}/active-security`);
     return { targetId, verified: true };
   } catch (error: unknown) {
@@ -210,34 +202,22 @@ export async function verifyActiveTarget(
   }
 }
 
-export async function startActiveScan(
-  formData: FormData,
-): Promise<void> {
+export async function startActiveScan(formData: FormData): Promise<void> {
   const projectId = text(formData, "projectId");
   const targetId = text(formData, "targetId");
   const profile = text(formData, "profile");
   if (!projectId || !targetId) return;
-  await apiJson(
-    "/api/v1/active-scans",
-    "POST",
-    {
-      targetId,
-      profile: profile === "standard" ? "standard" : "safe",
-    },
-  );
+  await apiJson("/api/v1/active-scans", "POST", {
+    targetId,
+    profile: profile === "standard" ? "standard" : "safe",
+  });
   revalidatePath(`/projects/${projectId}/active-security`);
 }
 
-export async function cancelActiveScan(
-  formData: FormData,
-): Promise<void> {
+export async function cancelActiveScan(formData: FormData): Promise<void> {
   const projectId = text(formData, "projectId");
   const scanId = text(formData, "scanId");
   if (!projectId || !scanId) return;
-  await apiJson(
-    `/api/v1/active-scans/${encodeURIComponent(scanId)}/cancel`,
-    "POST",
-    {},
-  );
+  await apiJson(`/api/v1/active-scans/${encodeURIComponent(scanId)}/cancel`, "POST", {});
   revalidatePath(`/projects/${projectId}/active-security`);
 }

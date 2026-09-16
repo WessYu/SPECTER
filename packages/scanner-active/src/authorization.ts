@@ -45,7 +45,10 @@ function normalized(input: string): URL {
 }
 
 function hostnameOf(url: URL): string {
-  return url.hostname.toLowerCase().replace(/^\[|\]$/g, "").replace(/\.$/, "");
+  return url.hostname
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "");
 }
 
 export function isLocalActiveTarget(input: string): boolean {
@@ -97,9 +100,7 @@ export async function generateDomainAuthorization(
   const record: StoredAuthorization = {
     hostname,
     origin: url.origin,
-    tokenHash: createHash("sha256")
-      .update(`specter-verification=${token}`)
-      .digest("hex"),
+    tokenHash: createHash("sha256").update(`specter-verification=${token}`).digest("hex"),
     tokenPrefix: token.slice(0, 8),
     tokenExpiresAt: new Date(now + VERIFICATION_TTL_MS).toISOString(),
   };
@@ -186,8 +187,7 @@ export async function resolveActiveAuthorization(
   const url = normalized(target);
   const hostname = hostnameOf(url);
 
-  if (isLocalActiveTarget(url.toString()))
-    return { status: "local", mode: "local", hostname };
+  if (isLocalActiveTarget(url.toString())) return { status: "local", mode: "local", hostname };
 
   if (previewHosts.some((item) => item.toLowerCase().replace(/\.$/, "") === hostname))
     return { status: "preview", mode: "preview", hostname };

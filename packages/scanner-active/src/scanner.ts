@@ -1,11 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { applySuppressions } from "@specter/core";
 import { calculateRiskScore, summarizeSeverity } from "@specter/risk-engine";
-import {
-  inspectTls,
-  safeRequest,
-  type SafeResponse,
-} from "@specter/scanner-web";
+import { inspectTls, safeRequest, type SafeResponse } from "@specter/scanner-web";
 import type {
   ActiveAuthorization,
   Finding,
@@ -20,10 +16,7 @@ import {
   isLocalActiveTarget,
   resolveActiveAuthorization,
 } from "./authorization.js";
-import {
-  ActiveBudgetExceededError,
-  ActiveRequestBudget,
-} from "./budget.js";
+import { ActiveBudgetExceededError, ActiveRequestBudget } from "./budget.js";
 import { discoverActiveSurface } from "./discovery.js";
 import { activeFinding, phaseForAuthorization } from "./findings.js";
 import type {
@@ -68,7 +61,7 @@ function header(response: SafeResponse, name: string): string | undefined {
 
 function setCookies(response: SafeResponse): readonly string[] {
   const value = response.headers["set-cookie"];
-  return typeof value === "string" ? [value] : value ?? [];
+  return typeof value === "string" ? [value] : (value ?? []);
 }
 
 function cookiePair(cookie: string): string {
@@ -93,21 +86,9 @@ function abortIfNeeded(signal?: AbortSignal): void {
 function markerContext(body: string, marker: string, contentType: string): string {
   if (/application\/(?:[a-z.+-]*\+)?json/i.test(contentType)) return "json";
   const escaped = marker.replace(/[.*+?^$()|[\]{}\\]/g, "\\$&");
-  if (new RegExp(`<script\\b[^>]*>[\\s\\S]{0,2000}${escaped}`, "i").test(body))
-    return "javascript";
-  if (
-    new RegExp(
-      `(?:href|src|action)\\s*=\\s*["'][^"']*${escaped}`,
-      "i",
-    ).test(body)
-  )
-    return "url";
-  if (
-    new RegExp(
-      `\\b[A-Za-z_:][-A-Za-z0-9_:.]*\\s*=\\s*["'][^"']*${escaped}`,
-      "i",
-    ).test(body)
-  )
+  if (new RegExp(`<script\\b[^>]*>[\\s\\S]{0,2000}${escaped}`, "i").test(body)) return "javascript";
+  if (new RegExp(`(?:href|src|action)\\s*=\\s*["'][^"']*${escaped}`, "i").test(body)) return "url";
+  if (new RegExp(`\\b[A-Za-z_:][-A-Za-z0-9_:.]*\\s*=\\s*["'][^"']*${escaped}`, "i").test(body))
     return "attribute";
   return "html";
 }
@@ -144,10 +125,7 @@ function leakSignals(body: string): readonly string[] {
       "stack-trace",
       /(?:\bat\s+[\w$.<>]+\s*\([^\n]+:\d+:\d+\)|Traceback \(most recent call last\))/i,
     ],
-    [
-      "internal-path",
-      /(?:[A-Z]:\\[^\r\n"]+|\/(?:home|usr|var|app|srv)\/[A-Za-z0-9_./-]+)/i,
-    ],
+    ["internal-path", /(?:[A-Z]:\\[^\r\n"]+|\/(?:home|usr|var|app|srv)\/[A-Za-z0-9_./-]+)/i],
     [
       "database-error",
       /(?:SQLSTATE|SequelizeDatabaseError|PrismaClientKnownRequestError|MongoServerError|syntax error at or near)/i,
@@ -157,8 +135,7 @@ function leakSignals(body: string): readonly string[] {
       /(?:webpack-internal|node_modules\/[^\s"]+\/src\/|__NEXT_DATA__[\s\S]{0,300}buildId)/i,
     ],
   ];
-  for (const [name, pattern] of tests)
-    if (pattern.test(body)) signals.push(name);
+  for (const [name, pattern] of tests) if (pattern.test(body)) signals.push(name);
   return signals;
 }
 
@@ -168,8 +145,7 @@ function bodySimilarity(a: string, b: string): number {
   const max = Math.max(a.length, b.length);
   const prefixLimit = Math.min(a.length, b.length);
   let same = 0;
-  for (let index = 0; index < prefixLimit; index += 1)
-    if (a[index] === b[index]) same += 1;
+  for (let index = 0; index < prefixLimit; index += 1) if (a[index] === b[index]) same += 1;
   return same / max;
 }
 
@@ -178,9 +154,7 @@ function unexpectedMethods(value: string | undefined): readonly string[] {
   return value
     .split(",")
     .map((item) => item.trim().toUpperCase())
-    .filter((item) =>
-      ["PUT", "PATCH", "DELETE", "TRACE", "CONNECT"].includes(item),
-    );
+    .filter((item) => ["PUT", "PATCH", "DELETE", "TRACE", "CONNECT"].includes(item));
 }
 
 function authCookie(response: SafeResponse): string | undefined {
@@ -190,19 +164,12 @@ function authCookie(response: SafeResponse): string | undefined {
   return cookie ? cookiePair(cookie) : undefined;
 }
 
-function formBody(
-  form: ActiveForm,
-  username: string,
-  password: string,
-): string {
+function formBody(form: ActiveForm, username: string, password: string): string {
   const params = new URLSearchParams();
   if (form.usernameField) params.set(form.usernameField, username);
   if (form.passwordField) params.set(form.passwordField, password);
   for (const name of form.parameters) {
-    if (
-      !params.has(name) &&
-      !/(?:csrf|xsrf|authenticity|requestverification)/i.test(name)
-    )
+    if (!params.has(name) && !/(?:csrf|xsrf|authenticity|requestverification)/i.test(name))
       params.set(name, "");
   }
   return params.toString();
@@ -219,10 +186,7 @@ function deduplicate(findings: readonly Finding[]): readonly Finding[] {
   const unique = new Map<string, Finding>();
   for (const finding of findings) {
     const current = unique.get(finding.fingerprint);
-    if (
-      !current ||
-      SEVERITY_RANK[finding.severity] > SEVERITY_RANK[current.severity]
-    )
+    if (!current || SEVERITY_RANK[finding.severity] > SEVERITY_RANK[current.severity])
       unique.set(finding.fingerprint, finding);
   }
   return [...unique.values()].sort(findingSort);
@@ -294,18 +258,12 @@ async function runTestAccountChecks(
   }
 
   const privateCandidates = discovery.endpoints.filter((endpoint) =>
-    /(?:private|account|dashboard|profile|me)(?:\/|$)/i.test(
-      new URL(endpoint.url).pathname,
-    ),
+    /(?:private|account|dashboard|profile|me)(?:\/|$)/i.test(new URL(endpoint.url).pathname),
   );
   let verifiedPrivate:
-    | { readonly endpoint: ActiveEndpoint; readonly response: SafeResponse }
-    | undefined;
+    { readonly endpoint: ActiveEndpoint; readonly response: SafeResponse } | undefined;
 
-  for (const endpoint of privateCandidates.slice(
-    0,
-    options.config.profile === "safe" ? 1 : 4,
-  )) {
+  for (const endpoint of privateCandidates.slice(0, options.config.profile === "safe" ? 1 : 4)) {
     const anonymous = await request(endpoint.url, {
       method: "GET",
       followRedirects: false,
@@ -344,8 +302,7 @@ async function runTestAccountChecks(
             authenticatedStatus: authenticated.status,
             similarity: Math.round(similarity * 1000) / 1000,
           },
-          remediation:
-            "Enforce authorization server-side on every private route and API handler.",
+          remediation: "Enforce authorization server-side on every private route and API handler.",
           whyItMatters:
             "A missing guard can expose private content without any need to bypass authentication.",
         }),
@@ -353,16 +310,9 @@ async function runTestAccountChecks(
     }
   }
 
-  if (
-    verifiedPrivate &&
-    statusAllowed("SPECTER-ACTIVE-CACHE-001", options)
-  ) {
-    const cacheControl =
-      header(verifiedPrivate.response, "cache-control") ?? "";
-    if (
-      /(?:public|max-age\s*=\s*[1-9])/i.test(cacheControl) ||
-      !/no-store/i.test(cacheControl)
-    ) {
+  if (verifiedPrivate && statusAllowed("SPECTER-ACTIVE-CACHE-001", options)) {
+    const cacheControl = header(verifiedPrivate.response, "cache-control") ?? "";
+    if (/(?:public|max-age\s*=\s*[1-9])/i.test(cacheControl) || !/no-store/i.test(cacheControl)) {
       findings.push(
         activeFinding({
           ruleId: "SPECTER-ACTIVE-CACHE-001",
@@ -376,8 +326,7 @@ async function runTestAccountChecks(
           route: new URL(verifiedPrivate.endpoint.url).pathname,
           method: "GET",
           evidence: { cacheControl: cacheControl || "(missing)" },
-          remediation:
-            "Use Cache-Control: no-store on responses containing private account data.",
+          remediation: "Use Cache-Control: no-store on responses containing private account data.",
           whyItMatters:
             "Private responses can remain accessible from browser or intermediary caches after the intended session.",
         }),
@@ -386,9 +335,7 @@ async function runTestAccountChecks(
   }
 
   const logout = discovery.forms.find(
-    (form) =>
-      /logout|signout/i.test(new URL(form.action).pathname) &&
-      form.method === "POST",
+    (form) => /logout|signout/i.test(new URL(form.action).pathname) && form.method === "POST",
   );
   if (!logout || !verifiedPrivate) return;
 
@@ -403,10 +350,7 @@ async function runTestAccountChecks(
     followRedirects: false,
     headers: { cookie: authenticatedCookie },
   });
-  const similarity = bodySimilarity(
-    afterLogout.body,
-    verifiedPrivate.response.body,
-  );
+  const similarity = bodySimilarity(afterLogout.body, verifiedPrivate.response.body);
   if (
     afterLogout.status >= 200 &&
     afterLogout.status < 400 &&
@@ -417,8 +361,7 @@ async function runTestAccountChecks(
       activeFinding({
         ruleId: "SPECTER-ACTIVE-SESSION-002",
         title: "Logout did not invalidate the previous session",
-        description:
-          "The old test-session cookie remained usable after the observed logout flow.",
+        description: "The old test-session cookie remained usable after the observed logout flow.",
         severity: "high",
         category: "cookies",
         status: "confirmed",
@@ -445,23 +388,16 @@ export async function runActiveScan(
   const startedMs = Date.now();
   const startedAt = new Date(startedMs).toISOString();
   const root = new URL(target);
-  const storePath =
-    options.storePath ?? defaultAuthorizationStore(process.cwd());
+  const storePath = options.storePath ?? defaultAuthorizationStore(process.cwd());
 
   const authorization: ActiveAuthorization =
     options.authorization ??
-    (await resolveActiveAuthorization(
-      target,
-      storePath,
-      options.config.previewHosts,
-    ));
+    (await resolveActiveAuthorization(target, storePath, options.config.previewHosts));
 
   if (!["local", "preview", "verified"].includes(authorization.status))
     throw new ActiveAuthorizationError();
 
-  const targetHostname = root.hostname
-    .toLowerCase()
-    .replace(/^\[|\]$/g, "");
+  const targetHostname = root.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (authorization.hostname.toLowerCase() !== targetHostname)
     throw new ActiveAuthorizationError(
       "Authorization hostname does not match the active scan target.",
@@ -480,10 +416,7 @@ export async function runActiveScan(
   const modules: ScanModuleResult[] = [];
   const allowLocalhost = isLocalActiveTarget(target);
 
-  const request: ActiveRequest = async (
-    url,
-    requestOptions = {},
-  ): Promise<SafeResponse> => {
+  const request: ActiveRequest = async (url, requestOptions = {}): Promise<SafeResponse> => {
     abortIfNeeded(options.signal);
     await budget.consume(options.signal);
     return safeRequest(url, {
@@ -527,9 +460,7 @@ export async function runActiveScan(
   }
   modules.push({
     name: "active-discovery",
-    status: errors.some((error) => error.module === "active-discovery")
-      ? "warning"
-      : "passed",
+    status: errors.some((error) => error.module === "active-discovery") ? "warning" : "passed",
     durationMs: Date.now() - mark,
     findingCount: 0,
   });
@@ -541,28 +472,17 @@ export async function runActiveScan(
     const route = new URL(snapshot.endpoint.url).pathname;
 
     for (const cookie of setCookies(snapshot.response)) {
-      const sensitive = /(?:session|sid|auth|token)/i.test(
-        cookieName(cookie),
-      );
+      const sensitive = /(?:session|sid|auth|token)/i.test(cookieName(cookie));
       if (!sensitive) continue;
       const missing: string[] = [];
       if (!/;\s*httponly(?:;|$)/i.test(cookie)) missing.push("HttpOnly");
       if (!/;\s*secure(?:;|$)/i.test(cookie)) missing.push("Secure");
-      if (!/;\s*samesite=(?:lax|strict)(?:;|$)/i.test(cookie))
-        missing.push("SameSite");
-      const domain =
-        cookie.match(/;\s*domain=([^;]+)/i)?.[1]?.trim() ?? undefined;
-      if (
-        domain &&
-        domain.startsWith(".") &&
-        domain.split(".").filter(Boolean).length <= 2
-      )
+      if (!/;\s*samesite=(?:lax|strict)(?:;|$)/i.test(cookie)) missing.push("SameSite");
+      const domain = cookie.match(/;\s*domain=([^;]+)/i)?.[1]?.trim() ?? undefined;
+      if (domain && domain.startsWith(".") && domain.split(".").filter(Boolean).length <= 2)
         missing.push("narrow Domain scope");
 
-      if (
-        missing.length > 0 &&
-        statusAllowed("SPECTER-ACTIVE-COOKIE-001", options)
-      ) {
+      if (missing.length > 0 && statusAllowed("SPECTER-ACTIVE-COOKIE-001", options)) {
         findings.push(
           activeFinding({
             ruleId: "SPECTER-ACTIVE-COOKIE-001",
@@ -590,8 +510,7 @@ export async function runActiveScan(
     }
 
     const contentType = header(snapshot.response, "content-type") ?? "";
-    const nosniff =
-      header(snapshot.response, "x-content-type-options") ?? "";
+    const nosniff = header(snapshot.response, "x-content-type-options") ?? "";
     const trimmed = snapshot.response.body.trim();
     if (
       (trimmed.startsWith("{") || trimmed.startsWith("[")) &&
@@ -602,8 +521,7 @@ export async function runActiveScan(
         activeFinding({
           ruleId: "SPECTER-ACTIVE-MIME-001",
           title: "Response MIME type does not match JSON content",
-          description:
-            "A JSON-shaped response was served with a non-JSON Content-Type.",
+          description: "A JSON-shaped response was served with a non-JSON Content-Type.",
           severity: "low",
           category: "headers",
           status: "confirmed",
@@ -614,8 +532,7 @@ export async function runActiveScan(
             contentType: contentType || "(missing)",
             nosniff: nosniff || "(missing)",
           },
-          remediation:
-            "Serve JSON with application/json and X-Content-Type-Options: nosniff.",
+          remediation: "Serve JSON with application/json and X-Content-Type-Options: nosniff.",
           whyItMatters:
             "MIME confusion can make clients interpret a response differently from the application contract.",
         }),
@@ -623,10 +540,7 @@ export async function runActiveScan(
     }
 
     const signals = leakSignals(snapshot.response.body);
-    if (
-      signals.length > 0 &&
-      statusAllowed("SPECTER-ACTIVE-LEAK-001", options)
-    ) {
+    if (signals.length > 0 && statusAllowed("SPECTER-ACTIVE-LEAK-001", options)) {
       findings.push(
         activeFinding({
           ruleId: "SPECTER-ACTIVE-LEAK-001",
@@ -640,8 +554,7 @@ export async function runActiveScan(
           route,
           method: "GET",
           evidence: { signals },
-          remediation:
-            "Return stable public error envelopes and keep diagnostics server-side.",
+          remediation: "Return stable public error envelopes and keep diagnostics server-side.",
           whyItMatters:
             "Implementation details reduce uncertainty and can disclose sensitive operational metadata.",
         }),
@@ -653,9 +566,7 @@ export async function runActiveScan(
     (item) => item.method === "GET" && item.parameters.length > 0,
   )) {
     const maxParameters =
-      options.config.profile === "safe"
-        ? 1
-        : options.config.maxParametersPerEndpoint;
+      options.config.profile === "safe" ? 1 : options.config.maxParametersPerEndpoint;
 
     for (const parameter of endpoint.parameters.slice(0, maxParameters)) {
       if (budget.remaining <= 0) break;
@@ -672,13 +583,8 @@ export async function runActiveScan(
           response.body.includes(canary) &&
           statusAllowed("SPECTER-ACTIVE-REFLECTION-001", options)
         ) {
-          const responseContentType =
-            header(response, "content-type") ?? "";
-          const contextName = markerContext(
-            response.body,
-            canary,
-            responseContentType,
-          );
+          const responseContentType = header(response, "content-type") ?? "";
+          const contextName = markerContext(response.body, canary, responseContentType);
           findings.push(
             activeFinding({
               ruleId: "SPECTER-ACTIVE-REFLECTION-001",
@@ -688,9 +594,7 @@ export async function runActiveScan(
               severity: "medium",
               category: "runtime",
               status:
-                contextName === "javascript" ||
-                contextName === "attribute" ||
-                contextName === "url"
+                contextName === "javascript" || contextName === "attribute" || contextName === "url"
                   ? "confirmed"
                   : "potential",
               context,
@@ -749,24 +653,13 @@ export async function runActiveScan(
           statusAllowed("SPECTER-ACTIVE-REDIRECT-001", options)
         ) {
           const redirectUrl = new URL(endpoint.url);
-          redirectUrl.searchParams.set(
-            parameter,
-            "https://specter.invalid/",
-          );
-          const redirectResponse = await request(
-            redirectUrl.toString(),
-            {
-              method: "GET",
-              followRedirects: false,
-            },
-          );
+          redirectUrl.searchParams.set(parameter, "https://specter.invalid/");
+          const redirectResponse = await request(redirectUrl.toString(), {
+            method: "GET",
+            followRedirects: false,
+          });
           const location = header(redirectResponse, "location");
-          if (
-            location &&
-            [301, 302, 303, 307, 308].includes(
-              redirectResponse.status,
-            )
-          ) {
+          if (location && [301, 302, 303, 307, 308].includes(redirectResponse.status)) {
             const destination = new URL(location, redirectUrl);
             if (destination.hostname === "specter.invalid") {
               findings.push(
@@ -805,12 +698,7 @@ export async function runActiveScan(
 
   const representative = discovery.endpoints
     .filter((endpoint) => endpoint.method === "GET")
-    .slice(
-      0,
-      options.config.profile === "safe"
-        ? 4
-        : Math.min(12, options.config.maxEndpoints),
-    );
+    .slice(0, options.config.profile === "safe" ? 4 : Math.min(12, options.config.maxEndpoints));
 
   for (const endpoint of representative) {
     if (budget.remaining <= 0) break;
@@ -821,17 +709,10 @@ export async function runActiveScan(
           followRedirects: false,
           headers: { origin: "https://specter.invalid" },
         });
-        const allowOrigin = header(
-          cors,
-          "access-control-allow-origin",
-        );
-        const allowCredentials = header(
-          cors,
-          "access-control-allow-credentials",
-        );
+        const allowOrigin = header(cors, "access-control-allow-origin");
+        const allowCredentials = header(cors, "access-control-allow-credentials");
         if (
-          (allowOrigin === "https://specter.invalid" ||
-            allowOrigin === "*") &&
+          (allowOrigin === "https://specter.invalid" || allowOrigin === "*") &&
           allowCredentials?.toLowerCase() === "true"
         ) {
           findings.push(
@@ -882,17 +763,12 @@ export async function runActiveScan(
         }
       }
 
-      if (
-        budget.remaining > 0 &&
-        statusAllowed("SPECTER-ACTIVE-METHOD-001", options)
-      ) {
+      if (budget.remaining > 0 && statusAllowed("SPECTER-ACTIVE-METHOD-001", options)) {
         const optionsResponse = await request(endpoint.url, {
           method: "OPTIONS",
           followRedirects: false,
         });
-        const methods = unexpectedMethods(
-          header(optionsResponse, "allow"),
-        );
+        const methods = unexpectedMethods(header(optionsResponse, "allow"));
         if (methods.length > 0) {
           findings.push(
             activeFinding({
@@ -919,10 +795,7 @@ export async function runActiveScan(
         }
       }
 
-      if (
-        budget.remaining > 0 &&
-        options.config.profile === "standard"
-      ) {
+      if (budget.remaining > 0 && options.config.profile === "standard") {
         await request(endpoint.url, {
           method: "HEAD",
           followRedirects: false,
@@ -934,15 +807,10 @@ export async function runActiveScan(
     }
   }
 
-  if (
-    discovery.snapshots.length > 1 &&
-    statusAllowed("SPECTER-ACTIVE-HEADERS-001", options)
-  ) {
+  if (discovery.snapshots.length > 1 && statusAllowed("SPECTER-ACTIVE-HEADERS-001", options)) {
     for (const name of SECURITY_HEADERS) {
       const values = new Set(
-        discovery.snapshots.map(
-          (item) => header(item.response, name) ?? "(missing)",
-        ),
+        discovery.snapshots.map((item) => header(item.response, name) ?? "(missing)"),
       );
       if (values.size <= 1) continue;
       findings.push(
@@ -950,8 +818,7 @@ export async function runActiveScan(
           ruleId: "SPECTER-ACTIVE-HEADERS-001",
           title: "Security header policy is inconsistent across routes",
           description: `${name} varied across observed application routes.`,
-          severity:
-            name === "content-security-policy" ? "medium" : "low",
+          severity: name === "content-security-policy" ? "medium" : "low",
           category: "headers",
           status: "confirmed",
           context,
@@ -1004,10 +871,7 @@ export async function runActiveScan(
     }
   }
 
-  if (
-    budget.remaining > 0 &&
-    statusAllowed("SPECTER-ACTIVE-HOST-001", options)
-  ) {
+  if (budget.remaining > 0 && statusAllowed("SPECTER-ACTIVE-HOST-001", options)) {
     try {
       const forwarded = await request(root.toString(), {
         method: "GET",
@@ -1018,10 +882,7 @@ export async function runActiveScan(
         },
       });
       const location = header(forwarded, "location") ?? "";
-      if (
-        forwarded.body.includes("specter.invalid") ||
-        location.includes("specter.invalid")
-      ) {
+      if (forwarded.body.includes("specter.invalid") || location.includes("specter.invalid")) {
         findings.push(
           activeFinding({
             ruleId: "SPECTER-ACTIVE-HOST-001",
@@ -1035,9 +896,7 @@ export async function runActiveScan(
             route: root.pathname || "/",
             method: "GET",
             evidence: {
-              reflectedIn: location.includes("specter.invalid")
-                ? "location"
-                : "body",
+              reflectedIn: location.includes("specter.invalid") ? "location" : "body",
             },
             remediation:
               "Trust forwarded host headers only from known proxies and generate canonical URLs from configured origins.",
@@ -1047,10 +906,7 @@ export async function runActiveScan(
         );
       }
 
-      if (
-        options.config.profile === "standard" &&
-        budget.remaining > 0
-      ) {
+      if (options.config.profile === "standard" && budget.remaining > 0) {
         const directHost = await request(root.toString(), {
           method: "GET",
           followRedirects: false,
@@ -1075,9 +931,7 @@ export async function runActiveScan(
               route: root.pathname || "/",
               method: "GET",
               evidence: {
-                reflectedIn: directLocation.includes("specter.invalid")
-                  ? "location"
-                  : "body",
+                reflectedIn: directLocation.includes("specter.invalid") ? "location" : "body",
               },
               remediation:
                 "Validate Host against known application hostnames before using it to generate links or redirects.",
@@ -1092,19 +946,9 @@ export async function runActiveScan(
     }
   }
 
-  if (
-    options.testUsername &&
-    options.testPassword &&
-    budget.remaining > 0
-  ) {
+  if (options.testUsername && options.testPassword && budget.remaining > 0) {
     try {
-      await runTestAccountChecks(
-        discovery,
-        request,
-        options,
-        context,
-        findings,
-      );
+      await runTestAccountChecks(discovery, request, options, context, findings);
     } catch (error: unknown) {
       if (error instanceof ActiveBudgetExceededError) {
         errors.push({
@@ -1118,10 +962,7 @@ export async function runActiveScan(
       } else {
         errors.push({
           code: "ACTIVE_AUTH_INCONCLUSIVE",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Test account validation failed.",
+          message: error instanceof Error ? error.message : "Test account validation failed.",
           module: "active-auth",
           recoverable: true,
         });
@@ -1129,25 +970,16 @@ export async function runActiveScan(
     }
   }
 
-  if (
-    root.protocol === "https:" &&
-    statusAllowed("SPECTER-ACTIVE-TLS-001", options)
-  ) {
+  if (root.protocol === "https:" && statusAllowed("SPECTER-ACTIVE-TLS-001", options)) {
     try {
-      const tls = await inspectTls(
-        root.toString(),
-        options.config.requestTimeoutMs,
-      );
-      const expired =
-        tls.validTo !== undefined &&
-        Date.parse(tls.validTo) <= Date.now();
+      const tls = await inspectTls(root.toString(), options.config.requestTimeoutMs);
+      const expired = tls.validTo !== undefined && Date.parse(tls.validTo) <= Date.now();
       if (tls.applicable && (!tls.authorized || expired)) {
         findings.push(
           activeFinding({
             ruleId: "SPECTER-ACTIVE-TLS-001",
             title: "TLS validation failed for the active target",
-            description:
-              "The target certificate was not currently trusted or valid.",
+            description: "The target certificate was not currently trusted or valid.",
             severity: "high",
             category: "tls",
             status: "confirmed",
@@ -1158,8 +990,7 @@ export async function runActiveScan(
               authorized: tls.authorized,
               validTo: tls.validTo,
             },
-            remediation:
-              "Serve the hostname with a valid, trusted and unexpired certificate.",
+            remediation: "Serve the hostname with a valid, trusted and unexpired certificate.",
             whyItMatters:
               "Broken TLS prevents clients from establishing an authenticated encrypted channel.",
           }),
@@ -1168,10 +999,7 @@ export async function runActiveScan(
     } catch (error: unknown) {
       errors.push({
         code: "ACTIVE_TLS_INCONCLUSIVE",
-        message:
-          error instanceof Error
-            ? error.message
-            : "TLS inspection failed.",
+        message: error instanceof Error ? error.message : "TLS inspection failed.",
         module: "active-tls",
         recoverable: true,
       });
@@ -1201,8 +1029,7 @@ export async function runActiveScan(
           activeFinding({
             ruleId: "SPECTER-ACTIVE-HTTPS-001",
             title: "HTTP does not consistently redirect to HTTPS",
-            description:
-              "The authorized hostname did not present a direct HTTP to HTTPS redirect.",
+            description: "The authorized hostname did not present a direct HTTP to HTTPS redirect.",
             severity: "medium",
             category: "tls",
             status: "potential",
@@ -1211,9 +1038,7 @@ export async function runActiveScan(
             method: "GET",
             evidence: {
               httpStatus: response.status,
-              location: location
-                ? new URL(location, httpUrl).protocol
-                : "(missing)",
+              location: location ? new URL(location, httpUrl).protocol : "(missing)",
             },
             remediation:
               "Redirect HTTP requests to the same hostname over HTTPS before serving application content.",
@@ -1226,10 +1051,7 @@ export async function runActiveScan(
       if ((error as Error).name === "AbortError") throw error;
       errors.push({
         code: "ACTIVE_HTTPS_INCONCLUSIVE",
-        message:
-          error instanceof Error
-            ? error.message
-            : "HTTP redirect validation failed.",
+        message: error instanceof Error ? error.message : "HTTP redirect validation failed.",
         module: "active-https",
         recoverable: true,
       });
@@ -1239,9 +1061,7 @@ export async function runActiveScan(
   modules.push({
     name: "active-validation",
     status: findings.some(
-      (finding) =>
-        finding.status !== "inconclusive" &&
-        finding.status !== "suppressed",
+      (finding) => finding.status !== "inconclusive" && finding.status !== "suppressed",
     )
       ? "warning"
       : "passed",
@@ -1249,21 +1069,13 @@ export async function runActiveScan(
     findingCount: findings.length,
   });
 
-  const suppressionResult = applySuppressions(
-    deduplicate(findings),
-    options.suppressions ?? [],
+  const suppressionResult = applySuppressions(deduplicate(findings), options.suppressions ?? []);
+  const reportFindings = [...suppressionResult.findings, ...suppressionResult.suppressed].sort(
+    findingSort,
   );
-  const reportFindings = [
-    ...suppressionResult.findings,
-    ...suppressionResult.suppressed,
-  ].sort(findingSort);
 
   const baselineFingerprints = options.baseline
-    ? new Set(
-        options.baseline.findings.map(
-          (finding) => finding.fingerprint,
-        ),
-      )
+    ? new Set(options.baseline.findings.map((finding) => finding.fingerprint))
     : undefined;
   const score = calculateRiskScore(
     reportFindings,
@@ -1289,31 +1101,19 @@ export async function runActiveScan(
     budget: {
       used: budget.used,
       max: budget.max,
-      maxRequestsPerSecond:
-        options.config.maxRequestsPerSecond,
+      maxRequestsPerSecond: options.config.maxRequestsPerSecond,
       concurrency: options.config.concurrency,
     },
     endpointCount: discovery.endpoints.length,
-    confirmedCount: reportFindings.filter(
-      (finding) => finding.status === "confirmed",
-    ).length,
-    potentialCount: reportFindings.filter(
-      (finding) => finding.status === "potential",
-    ).length,
+    confirmedCount: reportFindings.filter((finding) => finding.status === "confirmed").length,
+    potentialCount: reportFindings.filter((finding) => finding.status === "potential").length,
     ...(options.baseline
       ? {
-          regressionDelta:
-            Math.round(
-              (score.value - options.baseline.score.value) * 10,
-            ) / 10,
+          regressionDelta: Math.round((score.value - options.baseline.score.value) * 10) / 10,
         }
       : {}),
     score,
-    summary: summarizeSeverity(
-      reportFindings.filter(
-        (finding) => finding.status !== "suppressed",
-      ),
-    ),
+    summary: summarizeSeverity(reportFindings.filter((finding) => finding.status !== "suppressed")),
     findings: reportFindings,
     modules,
     errors,

@@ -39,11 +39,7 @@ function htmlLinks(html: string, base: URL): readonly string[] {
   return [...found];
 }
 
-function parseForms(
-  html: string,
-  base: URL,
-  maxParameters: number,
-): readonly ActiveForm[] {
+function parseForms(html: string, base: URL, maxParameters: number): readonly ActiveForm[] {
   const forms: ActiveForm[] = [];
   for (const match of html.matchAll(/<form\b([^>]*)>([\s\S]*?)<\/form>/gi)) {
     const attributes = match[1] ?? "";
@@ -108,9 +104,7 @@ function jsRoutes(source: string, base: URL): readonly string[] {
 function sitemapRoutes(xml: string, base: URL): readonly string[] {
   const found: string[] = [];
   for (const match of xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/gi)) {
-    const value = match[1]
-      ? normalizeUrl(match[1].replaceAll("&amp;", "&"), base)
-      : undefined;
+    const value = match[1] ? normalizeUrl(match[1].replaceAll("&amp;", "&"), base) : undefined;
     if (value) found.push(value);
   }
   return found;
@@ -128,8 +122,7 @@ function openApiRoutes(body: string, base: URL): readonly ActiveEndpoint[] {
       if (!url) continue;
       for (const method of Object.keys(methods)) {
         const upper = method.toUpperCase();
-        if (!["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"].includes(upper))
-          continue;
+        if (!["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"].includes(upper)) continue;
         result.push({
           url,
           method: upper as SafeHttpMethod,
@@ -163,8 +156,7 @@ export async function discoverActiveSurface(
     const url = normalizeUrl(route.url, root);
     if (!url || !sameHost(new URL(url), root)) continue;
     const method = route.method.toUpperCase();
-    if (!["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"].includes(method))
-      continue;
+    if (!["GET", "HEAD", "OPTIONS", "POST", "PUT", "PATCH", "DELETE"].includes(method)) continue;
     endpoints.set(`${method} ${url}`, {
       url,
       method: method as SafeHttpMethod,
@@ -217,14 +209,9 @@ export async function discoverActiveSurface(
 
     const base = new URL(response.url);
     const links = htmlLinks(response.body, base);
-    for (const link of links)
-      if (sameHost(new URL(link), root)) addCandidate(link, "link");
+    for (const link of links) if (sameHost(new URL(link), root)) addCandidate(link, "link");
 
-    for (const form of parseForms(
-      response.body,
-      base,
-      config.maxParametersPerEndpoint,
-    )) {
+    for (const form of parseForms(response.body, base, config.maxParametersPerEndpoint)) {
       if (!sameHost(new URL(form.action), root)) continue;
       forms.push(form);
       endpoints.set(`${form.method} ${form.action}`, {
@@ -236,9 +223,7 @@ export async function discoverActiveSurface(
     }
 
     const scriptLimit = config.profile === "safe" ? 1 : 4;
-    const scripts = links
-      .filter((url) => /\.m?js(?:\?|$)/i.test(url))
-      .slice(0, scriptLimit);
+    const scripts = links.filter((url) => /\.m?js(?:\?|$)/i.test(url)).slice(0, scriptLimit);
 
     for (const script of scripts) {
       try {
@@ -264,10 +249,7 @@ export async function discoverActiveSurface(
         });
         for (const discovered of openApiRoutes(api.body, new URL(spec)))
           if (sameHost(new URL(discovered.url), root))
-            endpoints.set(
-              `${discovered.method} ${discovered.url}`,
-              discovered,
-            );
+            endpoints.set(`${discovered.method} ${discovered.url}`, discovered);
       } catch {
         // Only explicitly published specs are inspected.
       }

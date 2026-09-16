@@ -85,12 +85,12 @@ The values are never printed in reports and are not persisted.
 
 ## Exit codes
 
-| Code | Meaning |
-| ---: | --- |
-| 0 | scan succeeded |
-| 1 | CI security gate failed |
-| 2 | usage or configuration error |
-| 3 | scan/runtime/authorization failure |
-| 130 | active assessment cancelled |
+| Code | Meaning                            |
+| ---: | ---------------------------------- |
+|    0 | scan succeeded                     |
+|    1 | CI security gate failed            |
+|    2 | usage or configuration error       |
+|    3 | scan/runtime/authorization failure |
+|  130 | active assessment cancelled        |
 
 A standalone `pentest` displays PASS/BLOCKED from the configured gate policy. It returns code 1 for policy failure when `--ci` is supplied, matching the existing scan behavior.

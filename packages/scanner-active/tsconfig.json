@@ -1,5 +1,12 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "rootDir": "../../", "outDir": "dist", "incremental": false },
-  "include": ["src/**/*.ts", "test/**/*.ts", "../types/src/**/*.ts", "../core/src/**/*.ts", "../risk-engine/src/**/*.ts", "../scanner-web/src/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "../types/src/**/*.ts",
+    "../core/src/**/*.ts",
+    "../risk-engine/src/**/*.ts",
+    "../scanner-web/src/**/*.ts"
+  ]
 }

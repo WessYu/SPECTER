@@ -317,7 +317,15 @@ export function validateConfig(input: unknown): SpecterConfig {
   if (input === null || typeof input !== "object" || Array.isArray(input))
     throw new Error("SPECTER config must be an object.");
   const value = input as Record<string, unknown>;
-  const allowed = new Set(["failOn", "maxScoreDrop", "ignore", "suppressions", "scan", "active", "limits"]);
+  const allowed = new Set([
+    "failOn",
+    "maxScoreDrop",
+    "ignore",
+    "suppressions",
+    "scan",
+    "active",
+    "limits",
+  ]);
   const unknownKeys = Object.keys(value).filter((key) => !allowed.has(key));
   if (unknownKeys.length) throw new Error(`Unknown SPECTER config keys: ${unknownKeys.join(", ")}`);
 
@@ -374,7 +382,8 @@ export function validateConfig(input: unknown): SpecterConfig {
     if (profile !== "safe" && profile !== "standard")
       throw new Error("active.profile must be safe or standard.");
     const enabled = source.enabled ?? defaultConfig.active.enabled;
-    const allowStateChangingMethods = source.allowStateChangingMethods ?? defaultConfig.active.allowStateChangingMethods;
+    const allowStateChangingMethods =
+      source.allowStateChangingMethods ?? defaultConfig.active.allowStateChangingMethods;
     if (typeof enabled !== "boolean") throw new Error("active.enabled must be boolean.");
     if (typeof allowStateChangingMethods !== "boolean")
       throw new Error("active.allowStateChangingMethods must be boolean.");
@@ -387,7 +396,10 @@ export function validateConfig(input: unknown): SpecterConfig {
     };
 
     const previewHostsRaw = source.previewHosts ?? defaultConfig.active.previewHosts;
-    if (!Array.isArray(previewHostsRaw) || previewHostsRaw.some((item) => typeof item !== "string" || item.trim().length === 0))
+    if (
+      !Array.isArray(previewHostsRaw) ||
+      previewHostsRaw.some((item) => typeof item !== "string" || item.trim().length === 0)
+    )
       throw new Error("active.previewHosts must be an array of hostnames.");
 
     active = {
@@ -400,7 +412,9 @@ export function validateConfig(input: unknown): SpecterConfig {
       maxEndpoints: positiveInteger("maxEndpoints", 200),
       maxParametersPerEndpoint: positiveInteger("maxParametersPerEndpoint", 50),
       allowStateChangingMethods,
-      previewHosts: previewHostsRaw.map((item) => (item as string).trim().toLowerCase().replace(/\.$/, "")),
+      previewHosts: previewHostsRaw.map((item) =>
+        (item as string).trim().toLowerCase().replace(/\.$/, ""),
+      ),
     };
   }
 

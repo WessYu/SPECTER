@@ -36,9 +36,7 @@ function toInputJson(value: unknown): Prisma.InputJsonValue {
 }
 
 function relevantSources(result: ScanResult): readonly FindingSource[] {
-  return result.target.kind === "url"
-    ? ["remote", "runtime"]
-    : ["static", "build", "dependency"];
+  return result.target.kind === "url" ? ["remote", "runtime"] : ["static", "build", "dependency"];
 }
 
 function toSuppression(row: SuppressionRow): Suppression {
@@ -83,20 +81,12 @@ export async function persistScan(
         completedAt: now,
         durationMs: Math.round(result.durationMs),
         ...(result.scanType ? { scanType: result.scanType } : {}),
-        ...(result.authorization
-          ? { authorizationJson: toInputJson(result.authorization) }
-          : {}),
+        ...(result.authorization ? { authorizationJson: toInputJson(result.authorization) } : {}),
         ...(result.profile ? { profile: result.profile } : {}),
         ...(result.budget ? { budgetJson: toInputJson(result.budget) } : {}),
-        ...(result.endpointCount !== undefined
-          ? { endpointCount: result.endpointCount }
-          : {}),
-        ...(result.confirmedCount !== undefined
-          ? { confirmedCount: result.confirmedCount }
-          : {}),
-        ...(result.potentialCount !== undefined
-          ? { potentialCount: result.potentialCount }
-          : {}),
+        ...(result.endpointCount !== undefined ? { endpointCount: result.endpointCount } : {}),
+        ...(result.confirmedCount !== undefined ? { confirmedCount: result.confirmedCount } : {}),
+        ...(result.potentialCount !== undefined ? { potentialCount: result.potentialCount } : {}),
         ...(result.regressionDelta !== undefined
           ? { regressionDelta: result.regressionDelta }
           : {}),
@@ -117,12 +107,8 @@ export async function persistScan(
       where: {
         projectId,
         source: { in: [...sources] },
-        ...(result.scanType === "active"
-          ? { scanner: "active" }
-          : {}),
-        ...(observedFingerprints.length
-          ? { fingerprint: { notIn: observedFingerprints } }
-          : {}),
+        ...(result.scanType === "active" ? { scanner: "active" } : {}),
+        ...(observedFingerprints.length ? { fingerprint: { notIn: observedFingerprints } } : {}),
         status: { not: "suppressed" },
       },
       data: { status: "resolved" },

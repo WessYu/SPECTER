@@ -1,16 +1,9 @@
 import { createHash } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  it,
-} from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createServer } from "../src/server.js";
 
-const enabled =
-  process.env.SPECTER_INTEGRATION_DATABASE === "1";
+const enabled = process.env.SPECTER_INTEGRATION_DATABASE === "1";
 const integration = enabled ? describe : describe.skip;
 const prisma = new PrismaClient();
 const app = createServer(prisma);
@@ -27,10 +20,7 @@ integration("active security PostgreSQL isolation", () => {
   const suffix = `${process.pid}-${Date.now()}`;
   const tokenA = `sp_session_${"c".repeat(43)}`;
   const tokenB = `sp_session_${"d".repeat(43)}`;
-  const emails = [
-    `active-a-${suffix}@example.invalid`,
-    `active-b-${suffix}@example.invalid`,
-  ];
+  const emails = [`active-a-${suffix}@example.invalid`, `active-b-${suffix}@example.invalid`];
   let orgAId = "";
   let orgBId = "";
   let projectId = "";
@@ -187,9 +177,7 @@ integration("active security PostgreSQL isolation", () => {
       data: {
         authorizationStatus: "verified",
         verifiedAt: new Date(),
-        authorizationExpiresAt: new Date(
-          Date.now() + 60_000,
-        ),
+        authorizationExpiresAt: new Date(Date.now() + 60_000),
       },
     });
     const queued = await prisma.activeScan.create({
@@ -215,9 +203,7 @@ integration("active security PostgreSQL isolation", () => {
       headers: { cookie: sessionCookie(tokenA) },
     });
     expect(ownCancel.statusCode).toBe(200);
-    expect(
-      (ownCancel.json() as { status: string }).status,
-    ).toBe("cancelled");
+    expect((ownCancel.json() as { status: string }).status).toBe("cancelled");
 
     const audit = await prisma.activeAuditLog.findFirst({
       where: {

@@ -5,9 +5,7 @@ import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
 const cli = path.join(root, "packages", "cli", "dist", "bin.js");
-const temp = await mkdtemp(
-  path.join(os.tmpdir(), "specter-active-smoke-"),
-);
+const temp = await mkdtemp(path.join(os.tmpdir(), "specter-active-smoke-"));
 
 function run(args) {
   return spawnSync(process.execPath, [cli, ...args], {
@@ -45,25 +43,14 @@ try {
     "--output",
     securePath,
   ]);
+  assert(secure.status === 0, "secure active fixture must pass the CI gate", secure);
+  const secureReport = JSON.parse(await readFile(securePath, "utf8"));
   assert(
-    secure.status === 0,
-    "secure active fixture must pass the CI gate",
-    secure,
-  );
-  const secureReport = JSON.parse(
-    await readFile(securePath, "utf8"),
-  );
-  assert(
-    secureReport.summary.high === 0 &&
-      secureReport.summary.critical === 0,
+    secureReport.summary.high === 0 && secureReport.summary.critical === 0,
     "secure active fixture must have zero high/critical findings",
     secure,
   );
-  assert(
-    secureReport.score.value >= 90,
-    "secure active fixture must score at least 90",
-    secure,
-  );
+  assert(secureReport.score.value >= 90, "secure active fixture must score at least 90", secure);
 
   const vulnerable = run([
     "pentest",
@@ -78,20 +65,14 @@ try {
     "vulnerable active fixture must be blocked by the CI gate",
     vulnerable,
   );
-  const vulnerableReport = JSON.parse(
-    await readFile(vulnerablePath, "utf8"),
-  );
+  const vulnerableReport = JSON.parse(await readFile(vulnerablePath, "utf8"));
   assert(
-    vulnerableReport.findings.some(
-      (finding) =>
-        finding.ruleId === "SPECTER-ACTIVE-CORS-001",
-    ),
+    vulnerableReport.findings.some((finding) => finding.ruleId === "SPECTER-ACTIVE-CORS-001"),
     "vulnerable fixture must confirm active CORS exposure",
     vulnerable,
   );
   assert(
-    vulnerableReport.budget.used <=
-      vulnerableReport.budget.max,
+    vulnerableReport.budget.used <= vulnerableReport.budget.max,
     "active scanner exceeded request budget",
     vulnerable,
   );
@@ -111,20 +92,14 @@ try {
     "secure to vulnerable transition must fail the regression gate",
     regression,
   );
-  const regressionReport = JSON.parse(
-    await readFile(regressionPath, "utf8"),
-  );
+  const regressionReport = JSON.parse(await readFile(regressionPath, "utf8"));
   assert(
     regressionReport.regressionDelta < 0,
     "active regression delta must be negative",
     regression,
   );
 
-  const refused = run([
-    "pentest",
-    "https://unverified.example",
-    "--json",
-  ]);
+  const refused = run(["pentest", "https://unverified.example", "--json"]);
   assert(
     refused.status === 3 &&
       refused.stderr.includes(

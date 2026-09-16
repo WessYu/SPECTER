@@ -26,14 +26,9 @@ interface ParsedActiveArgs {
   readonly rules: ReadonlySet<string>;
 }
 
-function valueAfter(
-  args: readonly string[],
-  index: number,
-  flag: string,
-): string {
+function valueAfter(args: readonly string[], index: number, flag: string): string {
   const value = args[index + 1];
-  if (!value || value.startsWith("--"))
-    throw new Error(`${flag} requires a value.`);
+  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value.`);
   return value;
 }
 
@@ -51,14 +46,12 @@ function parseActiveArgs(args: readonly string[]): ParsedActiveArgs {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--json") {
-      if (format === "sarif")
-        throw new Error("--json and --sarif are mutually exclusive.");
+      if (format === "sarif") throw new Error("--json and --sarif are mutually exclusive.");
       format = "json";
       continue;
     }
     if (arg === "--sarif") {
-      if (format === "json")
-        throw new Error("--json and --sarif are mutually exclusive.");
+      if (format === "json") throw new Error("--json and --sarif are mutually exclusive.");
       format = "sarif";
       continue;
     }
@@ -81,14 +74,8 @@ function parseActiveArgs(args: readonly string[]): ParsedActiveArgs {
     }
     if (arg === "--fail-on") {
       const value = valueAfter(args, index, arg);
-      if (
-        !["critical", "high", "medium", "low", "none"].includes(
-          value,
-        )
-      )
-        throw new Error(
-          "--fail-on must be critical, high, medium, low or none.",
-        );
+      if (!["critical", "high", "medium", "low", "none"].includes(value))
+        throw new Error("--fail-on must be critical, high, medium, low or none.");
       failOn = value as Severity | "none";
       index += 1;
       continue;
@@ -96,9 +83,7 @@ function parseActiveArgs(args: readonly string[]): ParsedActiveArgs {
     if (arg === "--max-score-drop") {
       const value = Number(valueAfter(args, index, arg));
       if (!Number.isFinite(value) || value < 0 || value > 100)
-        throw new Error(
-          "--max-score-drop must be between 0 and 100.",
-        );
+        throw new Error("--max-score-drop must be between 0 and 100.");
       maxScoreDrop = value;
       index += 1;
       continue;
@@ -113,15 +98,12 @@ function parseActiveArgs(args: readonly string[]): ParsedActiveArgs {
       index += 1;
       continue;
     }
-    if (arg?.startsWith("-"))
-      throw new Error(`Unknown pentest option: ${arg}`);
-    if (target)
-      throw new Error("Only one pentest target may be supplied.");
+    if (arg?.startsWith("-")) throw new Error(`Unknown pentest option: ${arg}`);
+    if (target) throw new Error("Only one pentest target may be supplied.");
     target = arg;
   }
 
-  if (!target)
-    throw new Error("Usage: specter pentest <path|url> [options]");
+  if (!target) throw new Error("Usage: specter pentest <path|url> [options]");
 
   return {
     target,
@@ -136,9 +118,7 @@ function parseActiveArgs(args: readonly string[]): ParsedActiveArgs {
   };
 }
 
-function activeSuppressions(
-  config: Awaited<ReturnType<typeof loadConfig>>["config"],
-) {
+function activeSuppressions(config: Awaited<ReturnType<typeof loadConfig>>["config"]) {
   return [
     ...config.ignore.map((ruleId) => ({
       ruleId,
@@ -148,10 +128,7 @@ function activeSuppressions(
   ];
 }
 
-function renderActiveReport(
-  scan: ScanResult,
-  blocked: boolean,
-): string {
+function renderActiveReport(scan: ScanResult, blocked: boolean): string {
   const counts = scan.summary;
   const authorization = scan.authorization?.status ?? "unverified";
   const lines = [
@@ -199,9 +176,7 @@ function renderActiveReport(
     lines.push(
       "",
       "Partial / inconclusive checks",
-      ...scan.errors.map(
-        (error) => `- ${error.code}: ${error.message}`,
-      ),
+      ...scan.errors.map((error) => `- ${error.code}: ${error.message}`),
     );
   }
   return `${lines.join("\n")}\n`;
@@ -217,16 +192,10 @@ async function persistActiveReport(
   const file = requested
     ? /\.(?:json|sarif)$/i.test(path.resolve(cwd, requested))
       ? path.resolve(cwd, requested)
-      : path.join(
-          path.resolve(cwd, requested),
-          `specter-active${extension}`,
-        )
+      : path.join(path.resolve(cwd, requested), `specter-active${extension}`)
     : path.join(cwd, ".specter", `active-report${extension}`);
   await mkdir(path.dirname(file), { recursive: true });
-  const content =
-    format === "sarif"
-      ? serializeSarif(scan)
-      : serializeJsonReport(scan);
+  const content = format === "sarif" ? serializeSarif(scan) : serializeJsonReport(scan);
   await writeFile(file, content, "utf8");
   return file;
 }
@@ -251,9 +220,7 @@ export async function runPentestCommand(
   try {
     loaded = await loadConfig(cwd);
     if (parsed.baselinePath)
-      baseline = await readScanReport(
-        path.resolve(cwd, parsed.baselinePath),
-      );
+      baseline = await readScanReport(path.resolve(cwd, parsed.baselinePath));
   } catch (error: unknown) {
     return {
       exitCode: 2,
@@ -265,12 +232,7 @@ export async function runPentestCommand(
   try {
     const target = /^https?:\/\//i.test(parsed.target)
       ? parsed.target
-      : (
-          (preview = await startLocalPreview(
-            path.resolve(cwd, parsed.target),
-            signal,
-          ))
-        ).url;
+      : (preview = await startLocalPreview(path.resolve(cwd, parsed.target), signal)).url;
 
     const config = {
       ...loaded.config.active,
@@ -294,16 +256,10 @@ export async function runPentestCommand(
 
     const gate = evaluateSecurityGate(scan, baseline, {
       failOn: parsed.failOn ?? loaded.config.failOn,
-      maxScoreDrop:
-        parsed.maxScoreDrop ?? loaded.config.maxScoreDrop,
+      maxScoreDrop: parsed.maxScoreDrop ?? loaded.config.maxScoreDrop,
     });
 
-    const saved = await persistActiveReport(
-      scan,
-      parsed.format,
-      parsed.output,
-      cwd,
-    );
+    const saved = await persistActiveReport(scan, parsed.format, parsed.output, cwd);
     const rendered =
       parsed.format === "json"
         ? serializeJsonReport(scan)
@@ -347,15 +303,11 @@ export async function runAuthorizeCommand(
       stderr: "Usage: specter authorize <url>\n",
     };
   try {
-    const generated = await generateDomainAuthorization(
-      target,
-      defaultAuthorizationStore(cwd),
-    );
+    const generated = await generateDomainAuthorization(target, defaultAuthorizationStore(cwd));
     if (generated.authorization.status === "local")
       return {
         exitCode: 0,
-        stdout:
-          "Localhost is automatically authorized for active testing.\n",
+        stdout: "Localhost is automatically authorized for active testing.\n",
       };
     return {
       exitCode: 0,
@@ -395,10 +347,7 @@ export async function runVerifyCommand(
       stderr: "Usage: specter verify <url>\n",
     };
   try {
-    const authorization = await verifyDomainAuthorization(
-      target,
-      defaultAuthorizationStore(cwd),
-    );
+    const authorization = await verifyDomainAuthorization(target, defaultAuthorizationStore(cwd));
     if (authorization.status !== "verified") {
       return {
         exitCode: 3,

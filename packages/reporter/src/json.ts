@@ -30,23 +30,13 @@ export function toJsonReport(scan: ScanResult): JsonReportEnvelope {
     scanId: scan.scanId,
     ...(scan.scanType ? { scanType: scan.scanType } : {}),
     target: scan.target,
-    ...(scan.authorization
-      ? { authorization: scan.authorization }
-      : {}),
+    ...(scan.authorization ? { authorization: scan.authorization } : {}),
     ...(scan.profile ? { profile: scan.profile } : {}),
     ...(scan.budget ? { budget: scan.budget } : {}),
-    ...(scan.endpointCount !== undefined
-      ? { endpointCount: scan.endpointCount }
-      : {}),
-    ...(scan.confirmedCount !== undefined
-      ? { confirmedCount: scan.confirmedCount }
-      : {}),
-    ...(scan.potentialCount !== undefined
-      ? { potentialCount: scan.potentialCount }
-      : {}),
-    ...(scan.regressionDelta !== undefined
-      ? { regressionDelta: scan.regressionDelta }
-      : {}),
+    ...(scan.endpointCount !== undefined ? { endpointCount: scan.endpointCount } : {}),
+    ...(scan.confirmedCount !== undefined ? { confirmedCount: scan.confirmedCount } : {}),
+    ...(scan.potentialCount !== undefined ? { potentialCount: scan.potentialCount } : {}),
+    ...(scan.regressionDelta !== undefined ? { regressionDelta: scan.regressionDelta } : {}),
     startedAt: scan.startedAt,
     completedAt: scan.completedAt,
     durationMs: scan.durationMs,
@@ -60,13 +50,6 @@ export function toJsonReport(scan: ScanResult): JsonReportEnvelope {
   };
 }
 
-export function serializeJsonReport(
-  scan: ScanResult,
-  pretty = true,
-): string {
-  return `${JSON.stringify(
-    toJsonReport(scan),
-    null,
-    pretty ? 2 : 0,
-  )}\n`;
+export function serializeJsonReport(scan: ScanResult, pretty = true): string {
+  return `${JSON.stringify(toJsonReport(scan), null, pretty ? 2 : 0)}\n`;
 }

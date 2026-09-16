@@ -23,24 +23,18 @@ function validateManifest(value: unknown): PreviewManifest {
     throw new Error("specter.active.json requires a command.");
   if (
     row.args !== undefined &&
-    (!Array.isArray(row.args) ||
-      row.args.some((item) => typeof item !== "string"))
+    (!Array.isArray(row.args) || row.args.some((item) => typeof item !== "string"))
   )
     throw new Error("specter.active.json args must be an array of strings.");
   if (
     row.healthPath !== undefined &&
-    (typeof row.healthPath !== "string" ||
-      !row.healthPath.startsWith("/"))
+    (typeof row.healthPath !== "string" || !row.healthPath.startsWith("/"))
   )
     throw new Error("specter.active.json healthPath must begin with /.");
   return {
     command: row.command.trim(),
-    ...(Array.isArray(row.args)
-      ? { args: row.args as readonly string[] }
-      : {}),
-    ...(typeof row.healthPath === "string"
-      ? { healthPath: row.healthPath }
-      : {}),
+    ...(Array.isArray(row.args) ? { args: row.args as readonly string[] } : {}),
+    ...(typeof row.healthPath === "string" ? { healthPath: row.healthPath } : {}),
   };
 }
 
@@ -80,9 +74,7 @@ async function waitForPreview(
       throw error;
     }
     if (processRef.exitCode !== null)
-      throw new Error(
-        `Local preview exited before becoming ready (code ${processRef.exitCode}).`,
-      );
+      throw new Error(`Local preview exited before becoming ready (code ${processRef.exitCode}).`);
     try {
       const response = await safeGet(healthUrl, {
         allowLocalhost: true,
@@ -107,9 +99,7 @@ export async function startLocalPreview(
 ): Promise<LocalPreview> {
   const root = path.resolve(targetPath);
   const manifestPath = path.join(root, "specter.active.json");
-  const manifest = validateManifest(
-    JSON.parse(await readFile(manifestPath, "utf8")),
-  );
+  const manifest = validateManifest(JSON.parse(await readFile(manifestPath, "utf8")));
   const port = await findFreePort();
   const child = spawn(manifest.command, [...(manifest.args ?? [])], {
     cwd: root,
@@ -125,12 +115,7 @@ export async function startLocalPreview(
   });
   const url = `http://127.0.0.1:${port}/`;
   try {
-    await waitForPreview(
-      url,
-      manifest.healthPath ?? "/",
-      child,
-      signal,
-    );
+    await waitForPreview(url, manifest.healthPath ?? "/", child, signal);
   } catch (error: unknown) {
     child.kill();
     throw error;

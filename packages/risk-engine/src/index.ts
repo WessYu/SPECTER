@@ -97,7 +97,12 @@ export function calculateRiskScore(
 ): RiskScore {
   const unique = new Map<string, Finding>();
   for (const finding of findings) {
-    if (finding.status === "suppressed" || finding.status === "inconclusive" || finding.status === "resolved") continue;
+    if (
+      finding.status === "suppressed" ||
+      finding.status === "inconclusive" ||
+      finding.status === "resolved"
+    )
+      continue;
     const current = unique.get(finding.fingerprint);
     if (!current || severityWeight[finding.severity] > severityWeight[current.severity])
       unique.set(finding.fingerprint, finding);

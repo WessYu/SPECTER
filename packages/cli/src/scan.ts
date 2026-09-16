@@ -257,8 +257,14 @@ export function renderReport(scan: ScanResult, format: "terminal" | "json" | "sa
   if (format === "sarif") return serializeSarif(scan);
   const counts = scan.summary;
   const lines = [
-    scan.scanType === "active" ? "SPECTER LIVE + ACTIVE" : scan.target.kind === "url" ? "SPECTER LIVE" : "SPECTER",
-    scan.scanType === "active" ? "AUTHORIZED ACTIVE TEST" : "Application security from source to production.",
+    scan.scanType === "active"
+      ? "SPECTER LIVE + ACTIVE"
+      : scan.target.kind === "url"
+        ? "SPECTER LIVE"
+        : "SPECTER",
+    scan.scanType === "active"
+      ? "AUTHORIZED ACTIVE TEST"
+      : "Application security from source to production.",
     "",
     "Target",
     scan.target.value,
@@ -311,13 +317,8 @@ export function mergeActiveScan(
   const baselineFingerprints = baseline
     ? new Set(baseline.findings.map((finding) => finding.fingerprint))
     : undefined;
-  const score = calculateRiskScore(
-    findings,
-    baselineFingerprints ? { baselineFingerprints } : {},
-  );
-  const activeFindings = findings.filter(
-    (finding) => finding.scanner === "active",
-  );
+  const score = calculateRiskScore(findings, baselineFingerprints ? { baselineFingerprints } : {});
+  const activeFindings = findings.filter((finding) => finding.scanner === "active");
   return {
     ...base,
     scanId: randomUUID(),
@@ -330,61 +331,36 @@ export function mergeActiveScan(
         ? base.completedAt
         : active.completedAt,
     durationMs:
-      Math.max(
-        Date.parse(base.completedAt),
-        Date.parse(active.completedAt),
-      ) -
-      Math.min(
-        Date.parse(base.startedAt),
-        Date.parse(active.startedAt),
-      ),
+      Math.max(Date.parse(base.completedAt), Date.parse(active.completedAt)) -
+      Math.min(Date.parse(base.startedAt), Date.parse(active.startedAt)),
     status:
-      base.status === "completed" && active.status === "completed"
-        ? "completed"
-        : active.status,
+      base.status === "completed" && active.status === "completed" ? "completed" : active.status,
     scanType: "active",
     authorization: active.authorization,
     profile: active.profile,
     budget: active.budget,
     endpointCount: active.endpointCount,
-    confirmedCount: activeFindings.filter(
-      (finding) => finding.status === "confirmed",
-    ).length,
-    potentialCount: activeFindings.filter(
-      (finding) => finding.status === "potential",
-    ).length,
+    confirmedCount: activeFindings.filter((finding) => finding.status === "confirmed").length,
+    potentialCount: activeFindings.filter((finding) => finding.status === "potential").length,
     ...(baseline
       ? {
-          regressionDelta:
-            Math.round((score.value - baseline.score.value) * 10) /
-            10,
+          regressionDelta: Math.round((score.value - baseline.score.value) * 10) / 10,
         }
       : {}),
     score,
-    summary: summarizeSeverity(
-      findings.filter(
-        (finding) => finding.status !== "suppressed",
-      ),
-    ),
+    summary: summarizeSeverity(findings.filter((finding) => finding.status !== "suppressed")),
     findings,
     modules: [...base.modules, ...active.modules],
     errors: [...base.errors, ...active.errors],
     surface: {
-      routes: [
-        ...(base.surface?.routes ?? []),
-        ...(active.surface?.routes ?? []),
-      ].filter(
+      routes: [...(base.surface?.routes ?? []), ...(active.surface?.routes ?? [])].filter(
         (route, index, all) =>
           all.findIndex(
-            (candidate) =>
-              candidate.method === route.method &&
-              candidate.url === route.url,
+            (candidate) => candidate.method === route.method && candidate.url === route.url,
           ) === index,
       ),
       externalDomains: base.surface?.externalDomains ?? [],
-      ...(base.surface?.removedDomains
-        ? { removedDomains: base.surface.removedDomains }
-        : {}),
+      ...(base.surface?.removedDomains ? { removedDomains: base.surface.removedDomains } : {}),
     },
   };
 }

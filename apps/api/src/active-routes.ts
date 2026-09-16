@@ -4,11 +4,7 @@ import type { FastifyInstance } from "fastify";
 import { defaultConfig } from "@specter/config";
 import { runActiveScan } from "@specter/scanner-active";
 import { safeGet } from "@specter/scanner-web";
-import type {
-  ActiveAuthorization,
-  ActiveProfile,
-  ScanResult,
-} from "@specter/types";
+import type { ActiveAuthorization, ActiveProfile, ScanResult } from "@specter/types";
 import { getAuth, requireRole } from "./auth.js";
 import { persistScan } from "./persistence.js";
 
@@ -64,8 +60,7 @@ function normalizeTarget(input: string): URL {
   const url = new URL(input);
   if (url.protocol !== "http:" && url.protocol !== "https:")
     throw new Error("target_url_must_be_http_or_https");
-  if (url.username || url.password)
-    throw new Error("target_url_must_not_include_credentials");
+  if (url.username || url.password) throw new Error("target_url_must_not_include_credentials");
   url.hash = "";
   return url;
 }
@@ -83,10 +78,7 @@ function enqueue(job: () => Promise<void>): void {
 }
 
 function pump(): void {
-  while (
-    activeJobs < MAX_CONCURRENT_ACTIVE_JOBS &&
-    pendingJobs.length > 0
-  ) {
+  while (activeJobs < MAX_CONCURRENT_ACTIVE_JOBS && pendingJobs.length > 0) {
     const next = pendingJobs.shift();
     if (!next) return;
     activeJobs += 1;
@@ -112,9 +104,7 @@ async function audit(
     data: {
       projectId: input.projectId,
       ...(input.targetId ? { targetId: input.targetId } : {}),
-      ...(input.activeScanId
-        ? { activeScanId: input.activeScanId }
-        : {}),
+      ...(input.activeScanId ? { activeScanId: input.activeScanId } : {}),
       principalId: input.principalId,
       action: input.action,
       ...(input.metadata ? { metadataJson: input.metadata } : {}),
@@ -142,9 +132,7 @@ async function ownedTarget(
   );
 }
 
-function verifiedAuthorization(
-  target: ActiveTargetRow,
-): ActiveAuthorization | undefined {
+function verifiedAuthorization(target: ActiveTargetRow): ActiveAuthorization | undefined {
   if (
     target.authorizationStatus !== "verified" ||
     !target.verifiedAt ||
@@ -211,7 +199,7 @@ async function executeActiveJob(
   });
 
   try {
-    const target = (await ownedTarget(
+    const target = await ownedTarget(
       prisma,
       (
         await prisma.project.findUniqueOrThrow({
@@ -220,39 +208,31 @@ async function executeActiveJob(
         })
       ).organizationId,
       queued.targetId,
-    ));
+    );
     if (!target) throw new Error("active_target_not_found");
 
     const authorization = verifiedAuthorization(target);
     if (!authorization)
-      throw new Error(
-        "Active scanning requires verified ownership or explicit authorization.",
-      );
+      throw new Error("Active scanning requires verified ownership or explicit authorization.");
 
-    const priorScore = await previousActiveScore(
-      prisma,
-      queued.projectId,
-    );
+    const priorScore = await previousActiveScore(prisma, queued.projectId);
     const result = await runActiveScan(target.url, {
       authorization,
       signal: controller.signal,
       config: {
         ...defaultConfig.active,
         enabled: true,
-        profile:
-          queued.profile === "standard" ? "standard" : "safe",
+        profile: queued.profile === "standard" ? "standard" : "safe",
         maxRequests: queued.requestBudget,
       },
       ...(process.env.SPECTER_TEST_USERNAME
         ? {
-            testUsername:
-              process.env.SPECTER_TEST_USERNAME,
+            testUsername: process.env.SPECTER_TEST_USERNAME,
           }
         : {}),
       ...(process.env.SPECTER_TEST_PASSWORD
         ? {
-            testPassword:
-              process.env.SPECTER_TEST_PASSWORD,
+            testPassword: process.env.SPECTER_TEST_PASSWORD,
           }
         : {}),
     });
@@ -262,17 +242,10 @@ async function executeActiveJob(
         ? result
         : {
             ...result,
-            regressionDelta:
-              Math.round((result.score.value - priorScore) * 10) /
-              10,
+            regressionDelta: Math.round((result.score.value - priorScore) * 10) / 10,
           };
 
-    await persistScan(
-      prisma,
-      target.project.organizationId,
-      queued.projectId,
-      finalResult,
-    );
+    await persistScan(prisma, target.project.organizationId, queued.projectId, finalResult);
 
     await prisma.activeScan.update({
       where: { id: activeScanId },
@@ -301,14 +274,11 @@ async function executeActiveJob(
         endpointCount: finalResult.endpointCount ?? 0,
         findingCount: finalResult.findings.length,
         confirmedCount: finalResult.confirmedCount ?? 0,
-        regressionDelta:
-          finalResult.regressionDelta ?? null,
+        regressionDelta: finalResult.regressionDelta ?? null,
       },
     });
   } catch (error: unknown) {
-    const cancelled =
-      controller.signal.aborted ||
-      (error as Error).name === "AbortError";
+    const cancelled = controller.signal.aborted || (error as Error).name === "AbortError";
     await prisma.activeScan.update({
       where: { id: activeScanId },
       data: {
@@ -316,10 +286,7 @@ async function executeActiveJob(
         completedAt: new Date(),
         error: cancelled
           ? null
-          : (error instanceof Error
-              ? error.message
-              : "Active scan failed"
-            ).slice(0, 2_000),
+          : (error instanceof Error ? error.message : "Active scan failed").slice(0, 2_000),
       },
     });
     await audit(prisma, {
@@ -327,9 +294,7 @@ async function executeActiveJob(
       targetId: queued.targetId,
       activeScanId,
       principalId,
-      action: cancelled
-        ? "active_scan_cancelled"
-        : "active_scan_failed",
+      action: cancelled ? "active_scan_cancelled" : "active_scan_failed",
       metadata: {
         cancelled,
         error: cancelled
@@ -344,10 +309,7 @@ async function executeActiveJob(
   }
 }
 
-export function registerActiveRoutes(
-  app: FastifyInstance,
-  prisma: PrismaClient,
-): void {
+export function registerActiveRoutes(app: FastifyInstance, prisma: PrismaClient): void {
   app.post<{
     Params: ProjectParams;
     Body: CreateTargetBody;
@@ -360,10 +322,7 @@ export function registerActiveRoutes(
     },
     async (request, reply) => {
       const auth = getAuth(request);
-      if (
-        auth.kind !== "session" ||
-        !requireRole(auth, ["owner", "admin", "member"])
-      )
+      if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin", "member"]))
         return reply.code(403).send({ error: "forbidden" });
 
       const project = await prisma.project.findFirst({
@@ -373,20 +332,14 @@ export function registerActiveRoutes(
         },
         select: { id: true },
       });
-      if (!project)
-        return reply
-          .code(404)
-          .send({ error: "project_not_found" });
+      if (!project) return reply.code(404).send({ error: "project_not_found" });
 
       let url: URL;
       try {
         url = normalizeTarget(request.body.url);
       } catch (error: unknown) {
         return reply.code(400).send({
-          error:
-            error instanceof Error
-              ? error.message
-              : "invalid_target",
+          error: error instanceof Error ? error.message : "invalid_target",
         });
       }
 
@@ -429,10 +382,7 @@ export function registerActiveRoutes(
         },
         select: { id: true },
       });
-      if (!project)
-        return reply
-          .code(404)
-          .send({ error: "project_not_found" });
+      if (!project) return reply.code(404).send({ error: "project_not_found" });
 
       const now = new Date();
       await prisma.activeTarget.updateMany({
@@ -465,28 +415,16 @@ export function registerActiveRoutes(
     },
     async (request, reply) => {
       const auth = getAuth(request);
-      if (
-        auth.kind !== "session" ||
-        !requireRole(auth, ["owner", "admin"])
-      )
+      if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin"]))
         return reply.code(403).send({ error: "forbidden" });
 
-      const target = await ownedTarget(
-        prisma,
-        auth.organizationId,
-        request.params.id,
-      );
-      if (!target)
-        return reply
-          .code(404)
-          .send({ error: "active_target_not_found" });
+      const target = await ownedTarget(prisma, auth.organizationId, request.params.id);
+      if (!target) return reply.code(404).send({ error: "active_target_not_found" });
 
       if ((request.body.action ?? "create") === "create") {
         const token = randomBytes(24).toString("base64url");
         const content = `specter-verification=${token}`;
-        const expiresAt = new Date(
-          Date.now() + VERIFICATION_TTL_MS,
-        );
+        const expiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
         await prisma.activeTarget.update({
           where: { id: target.id },
           data: {
@@ -511,8 +449,7 @@ export function registerActiveRoutes(
         return reply.code(201).send({
           token,
           content,
-          httpPath:
-            "/.well-known/specter-verification.txt",
+          httpPath: "/.well-known/specter-verification.txt",
           expiresAt: expiresAt.toISOString(),
         });
       }
@@ -526,46 +463,32 @@ export function registerActiveRoutes(
           where: { id: target.id },
           data: { authorizationStatus: "expired" },
         });
-        return reply
-          .code(400)
-          .send({ error: "verification_expired" });
+        return reply.code(400).send({ error: "verification_expired" });
       }
 
-      const verificationUrl = new URL(
-        "/.well-known/specter-verification.txt",
-        target.url,
-      );
+      const verificationUrl = new URL("/.well-known/specter-verification.txt", target.url);
       let matched = false;
       try {
-        const response = await safeGet(
-          verificationUrl.toString(),
-          {
-            requestTimeoutMs: 5_000,
-            totalTimeoutMs: 8_000,
-            maxRedirects: 0,
-            maxResponseBytes: 8_192,
-            followRedirects: false,
-            requireSameHostname: true,
-          },
-        );
+        const response = await safeGet(verificationUrl.toString(), {
+          requestTimeoutMs: 5_000,
+          totalTimeoutMs: 8_000,
+          maxRedirects: 0,
+          maxResponseBytes: 8_192,
+          followRedirects: false,
+          requireSameHostname: true,
+        });
         matched =
           response.status === 200 &&
-          normalizedHostname(new URL(response.url)) ===
-            target.hostname &&
+          normalizedHostname(new URL(response.url)) === target.hostname &&
           sha256(response.body.trim()) === target.tokenHash;
       } catch {
         matched = false;
       }
 
-      if (!matched)
-        return reply
-          .code(409)
-          .send({ verified: false });
+      if (!matched) return reply.code(409).send({ verified: false });
 
       const verifiedAt = new Date();
-      const authorizationExpiresAt = new Date(
-        verifiedAt.getTime() + AUTHORIZATION_TTL_MS,
-      );
+      const authorizationExpiresAt = new Date(verifiedAt.getTime() + AUTHORIZATION_TTL_MS);
       const updated = await prisma.activeTarget.update({
         where: { id: target.id },
         data: {
@@ -584,8 +507,7 @@ export function registerActiveRoutes(
         action: "active_target_verified",
         metadata: {
           verifiedAt: verifiedAt.toISOString(),
-          authorizationExpiresAt:
-            authorizationExpiresAt.toISOString(),
+          authorizationExpiresAt: authorizationExpiresAt.toISOString(),
         },
       });
       return reply.send({
@@ -604,41 +526,21 @@ export function registerActiveRoutes(
     },
     async (request, reply) => {
       const auth = getAuth(request);
-      if (
-        auth.kind !== "session" ||
-        !requireRole(auth, ["owner", "admin", "member"])
-      )
+      if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin", "member"]))
         return reply.code(403).send({ error: "forbidden" });
 
-      const target = await ownedTarget(
-        prisma,
-        auth.organizationId,
-        request.body.targetId,
-      );
-      if (!target)
-        return reply
-          .code(404)
-          .send({ error: "active_target_not_found" });
+      const target = await ownedTarget(prisma, auth.organizationId, request.body.targetId);
+      if (!target) return reply.code(404).send({ error: "active_target_not_found" });
 
       if (!verifiedAuthorization(target))
         return reply.code(403).send({
           error: "active_target_not_authorized",
-          message:
-            "Active scanning requires verified ownership or explicit authorization.",
+          message: "Active scanning requires verified ownership or explicit authorization.",
         });
 
-      const profile =
-        request.body.profile === "standard"
-          ? "standard"
-          : "safe";
-      const maxRequests =
-        request.body.maxRequests ??
-        defaultConfig.active.maxRequests;
-      if (
-        !Number.isInteger(maxRequests) ||
-        maxRequests < 1 ||
-        maxRequests > 5_000
-      )
+      const profile = request.body.profile === "standard" ? "standard" : "safe";
+      const maxRequests = request.body.maxRequests ?? defaultConfig.active.maxRequests;
+      if (!Number.isInteger(maxRequests) || maxRequests < 1 || maxRequests > 5_000)
         return reply.code(400).send({
           error: "invalid_request_budget",
         });
@@ -665,13 +567,7 @@ export function registerActiveRoutes(
         },
       });
 
-      enqueue(() =>
-        executeActiveJob(
-          prisma,
-          scan.id,
-          auth.principalId,
-        ),
-      );
+      enqueue(() => executeActiveJob(prisma, scan.id, auth.principalId));
       return reply.code(202).send(scan);
     },
   );
@@ -688,10 +584,7 @@ export function registerActiveRoutes(
         },
         select: { id: true },
       });
-      if (!project)
-        return reply
-          .code(404)
-          .send({ error: "project_not_found" });
+      if (!project) return reply.code(404).send({ error: "project_not_found" });
       return reply.send(
         await prisma.activeScan.findMany({
           where: { projectId: project.id },
@@ -716,30 +609,22 @@ export function registerActiveRoutes(
     },
   );
 
-  app.get<{ Params: EntityParams }>(
-    "/api/v1/active-scans/:id",
-    {},
-    async (request, reply) => {
-      const auth = getAuth(request);
-      const scan = await prisma.activeScan.findFirst({
-        where: {
-          id: request.params.id,
-          project: {
-            organizationId: auth.organizationId,
-          },
+  app.get<{ Params: EntityParams }>("/api/v1/active-scans/:id", {}, async (request, reply) => {
+    const auth = getAuth(request);
+    const scan = await prisma.activeScan.findFirst({
+      where: {
+        id: request.params.id,
+        project: {
+          organizationId: auth.organizationId,
         },
-        include: {
-          target: true,
-          resultScan: true,
-        },
-      });
-      return scan
-        ? reply.send(scan)
-        : reply
-            .code(404)
-            .send({ error: "active_scan_not_found" });
-    },
-  );
+      },
+      include: {
+        target: true,
+        resultScan: true,
+      },
+    });
+    return scan ? reply.send(scan) : reply.code(404).send({ error: "active_scan_not_found" });
+  });
 
   app.post<{ Params: EntityParams }>(
     "/api/v1/active-scans/:id/cancel",
@@ -750,10 +635,7 @@ export function registerActiveRoutes(
     },
     async (request, reply) => {
       const auth = getAuth(request);
-      if (
-        auth.kind !== "session" ||
-        !requireRole(auth, ["owner", "admin", "member"])
-      )
+      if (auth.kind !== "session" || !requireRole(auth, ["owner", "admin", "member"]))
         return reply.code(403).send({ error: "forbidden" });
 
       const scan = await prisma.activeScan.findFirst({
@@ -764,14 +646,8 @@ export function registerActiveRoutes(
           },
         },
       });
-      if (!scan)
-        return reply
-          .code(404)
-          .send({ error: "active_scan_not_found" });
-      if (
-        scan.status !== "queued" &&
-        scan.status !== "running"
-      )
+      if (!scan) return reply.code(404).send({ error: "active_scan_not_found" });
+      if (scan.status !== "queued" && scan.status !== "running")
         return reply.code(409).send({
           error: "active_scan_not_cancellable",
         });
@@ -807,10 +683,7 @@ export function registerActiveRoutes(
         },
         select: { id: true },
       });
-      if (!project)
-        return reply
-          .code(404)
-          .send({ error: "project_not_found" });
+      if (!project) return reply.code(404).send({ error: "project_not_found" });
       return reply.send(
         await prisma.finding.findMany({
           where: {
@@ -823,10 +696,7 @@ export function registerActiveRoutes(
               take: 1,
             },
           },
-          orderBy: [
-            { lastDetectedAt: "desc" },
-            { severity: "desc" },
-          ],
+          orderBy: [{ lastDetectedAt: "desc" }, { severity: "desc" }],
           take: 500,
         }),
       );

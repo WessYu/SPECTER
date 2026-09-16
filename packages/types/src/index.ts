@@ -20,12 +20,7 @@ export type FindingCategory =
   | "build";
 export type FindingSource = "static" | "build" | "dependency" | "remote" | "runtime";
 export type FindingStatus =
-  | "open"
-  | "resolved"
-  | "suppressed"
-  | "confirmed"
-  | "potential"
-  | "inconclusive";
+  "open" | "resolved" | "suppressed" | "confirmed" | "potential" | "inconclusive";
 export type ScanTargetKind = "project" | "build" | "url";
 export type ScanStatus = "queued" | "running" | "completed" | "failed" | "cancelled";
 export type FindingScanner = "static" | "build" | "dependency" | "passive" | "runtime" | "active";

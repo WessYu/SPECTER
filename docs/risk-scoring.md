@@ -18,21 +18,21 @@ deduction =
 Severity weights:
 
 | Severity | Weight |
-| --- | ---: |
-| critical | 28 |
-| high | 16 |
-| medium | 8 |
-| low | 3 |
-| info | 0 |
+| -------- | -----: |
+| critical |     28 |
+| high     |     16 |
+| medium   |      8 |
+| low      |      3 |
+| info     |      0 |
 
 Confidence multipliers:
 
 | Confidence | Multiplier |
-| --- | ---: |
-| confirmed | 1.18 |
-| high | 1.00 |
-| medium | 0.72 |
-| low | 0.40 |
+| ---------- | ---------: |
+| confirmed  |       1.18 |
+| high       |       1.00 |
+| medium     |       0.72 |
+| low        |       0.40 |
 
 A finding new relative to the supplied baseline receives the existing 1.12 novelty multiplier.
 

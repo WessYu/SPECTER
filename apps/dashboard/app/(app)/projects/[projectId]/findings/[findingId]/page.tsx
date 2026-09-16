@@ -84,11 +84,7 @@ export default async function FindingDetailPage({
             <dt>Lifecycle</dt>
             <dd>{finding.status}</dd>
             <dt>Regression status</dt>
-            <dd>
-              {finding.firstDetectedAt === finding.lastDetectedAt
-                ? "NEW"
-                : "EXISTING"}
-            </dd>
+            <dd>{finding.firstDetectedAt === finding.lastDetectedAt ? "NEW" : "EXISTING"}</dd>
             <dt>First detected</dt>
             <dd>{formatDate(finding.firstDetectedAt)}</dd>
             <dt>Last detected</dt>

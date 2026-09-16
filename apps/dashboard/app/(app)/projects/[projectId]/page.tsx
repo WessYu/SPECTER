@@ -95,11 +95,7 @@ export default async function ProjectPage({
             <div className="eyebrow">STATIC</div>
             <h2>Source + build</h2>
             <p className="subtle">
-              {data.scans.some(
-                (scan) =>
-                  scan.scanType !== "active" &&
-                  scan.targetKind !== "url",
-              )
+              {data.scans.some((scan) => scan.scanType !== "active" && scan.targetKind !== "url")
                 ? "Measured"
                 : "Not measured"}
             </p>
@@ -108,27 +104,16 @@ export default async function ProjectPage({
             <div className="eyebrow">PASSIVE</div>
             <h2>Published runtime</h2>
             <p className="subtle">
-              {data.scans.some(
-                (scan) =>
-                  scan.scanType !== "active" &&
-                  scan.targetKind === "url",
-              )
+              {data.scans.some((scan) => scan.scanType !== "active" && scan.targetKind === "url")
                 ? "Measured"
                 : "Not measured"}
             </p>
           </div>
-          <Link
-            href={`/projects/${projectId}/active-security`}
-            className="panel layer-link"
-          >
+          <Link href={`/projects/${projectId}/active-security`} className="panel layer-link">
             <div className="eyebrow">ACTIVE</div>
             <h2>Authorized validation</h2>
             <p className="subtle">
-              {data.scans.some(
-                (scan) => scan.scanType === "active",
-              )
-                ? "Measured"
-                : "Not measured"}
+              {data.scans.some((scan) => scan.scanType === "active") ? "Measured" : "Not measured"}
             </p>
           </Link>
         </div>

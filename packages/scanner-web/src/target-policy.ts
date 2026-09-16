@@ -35,7 +35,10 @@ export async function resolvePublicTarget(
   if (url.protocol !== "http:" && url.protocol !== "https:")
     throw new TargetPolicyError("INVALID_SCHEME", "Only HTTP and HTTPS targets are allowed.");
   if (url.username || url.password)
-    throw new TargetPolicyError("BLOCKED_HOST", "Credentials embedded in target URLs are not allowed.");
+    throw new TargetPolicyError(
+      "BLOCKED_HOST",
+      "Credentials embedded in target URLs are not allowed.",
+    );
 
   const hostname = url.hostname.replace(/^\[|\]$/g, "").toLowerCase();
   const allowLocalhost = options.allowLocalhost === true;
@@ -63,14 +66,20 @@ export async function resolvePublicTarget(
   if (hostname === "localhost") {
     const chosen = addresses.find((item) => isLoopbackIp(item.address));
     if (!chosen)
-      throw new TargetPolicyError("BLOCKED_HOST", "localhost did not resolve to a loopback address.");
+      throw new TargetPolicyError(
+        "BLOCKED_HOST",
+        "localhost did not resolve to a loopback address.",
+      );
     if (chosen.family !== 4 && chosen.family !== 6)
       throw new TargetPolicyError("DNS_FAILURE", "Unsupported localhost address family.");
     return { url, address: chosen.address, family: chosen.family };
   }
 
   if (addresses.some((item) => !acceptedAddress(item.address, false)))
-    throw new TargetPolicyError("BLOCKED_HOST", `Target ${hostname} resolves to a non-public address.`);
+    throw new TargetPolicyError(
+      "BLOCKED_HOST",
+      `Target ${hostname} resolves to a non-public address.`,
+    );
   const chosen = addresses[0];
   if (!chosen)
     throw new TargetPolicyError("DNS_FAILURE", `No usable address resolved for ${hostname}`);

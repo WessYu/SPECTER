@@ -10,10 +10,7 @@ import { ProjectTabs } from "../../../../../components/project-tabs";
 import { Severity } from "../../../../../components/severity";
 import { ActiveTargetForm } from "../../../../../components/active-target-form";
 import { ActiveTargetControls } from "../../../../../components/active-target-controls";
-import {
-  cancelActiveScan,
-  startActiveScan,
-} from "../../../actions";
+import { cancelActiveScan, startActiveScan } from "../../../actions";
 
 function authClass(status: string): string {
   return status === "verified"
@@ -41,9 +38,7 @@ export default async function ActiveSecurityPage({
     ),
   ]);
   const latest = scans[0];
-  const latestTarget = latest
-    ? targets.find((target) => target.id === latest.targetId)
-    : undefined;
+  const latestTarget = latest ? targets.find((target) => target.id === latest.targetId) : undefined;
   const regression = latest?.resultScan?.regressionDelta ?? null;
 
   return (
@@ -60,9 +55,8 @@ export default async function ActiveSecurityPage({
       <section className="panel">
         <h2>Add target</h2>
         <p className="subtle">
-          Remote active testing stays disabled until ownership is
-          verified for the exact hostname. Redirects never transfer
-          authorization to another hostname.
+          Remote active testing stays disabled until ownership is verified for the exact hostname.
+          Redirects never transfer authorization to another hostname.
         </p>
         <ActiveTargetForm projectId={projectId} />
       </section>
@@ -70,17 +64,13 @@ export default async function ActiveSecurityPage({
       <section className="section">
         <div className="section-head">
           <h2>Last active test</h2>
-          <span className="eyebrow">
-            {latest ? formatDate(latest.createdAt) : "Never"}
-          </span>
+          <span className="eyebrow">{latest ? formatDate(latest.createdAt) : "Never"}</span>
         </div>
         {latest ? (
           <div className="active-metric-grid">
             <div className="metric">
               <div className="metric-label">Target</div>
-              <div className="metric-value active-value">
-                {latest.target.hostname}
-              </div>
+              <div className="metric-value active-value">{latest.target.hostname}</div>
             </div>
             <div className="metric">
               <div className="metric-label">Authorization</div>
@@ -116,25 +106,19 @@ export default async function ActiveSecurityPage({
                     : "metric-value"
                 }
               >
-                {regression === null
-                  ? "NO BASELINE"
-                  : `${regression >= 0 ? "+" : ""}${regression}`}
+                {regression === null ? "NO BASELINE" : `${regression >= 0 ? "+" : ""}${regression}`}
               </div>
             </div>
             <div className="metric">
               <div className="metric-label">Score</div>
               <div className="metric-value">
-                {latest.score === null
-                  ? "—"
-                  : `${Math.round(latest.score)}/100`}
+                {latest.score === null ? "—" : `${Math.round(latest.score)}/100`}
               </div>
             </div>
           </div>
         ) : (
           <div className="empty">
-            <p className="subtle">
-              No active security test has been queued for this project.
-            </p>
+            <p className="subtle">No active security test has been queued for this project.</p>
           </div>
         )}
       </section>
@@ -177,11 +161,7 @@ export default async function ActiveSecurityPage({
                         {target.authorizationStatus.toUpperCase()}
                       </span>
                     </td>
-                    <td>
-                      {target.verifiedAt
-                        ? formatDate(target.verifiedAt)
-                        : "—"}
-                    </td>
+                    <td>{target.verifiedAt ? formatDate(target.verifiedAt) : "—"}</td>
                     <td>
                       {target.authorizationExpiresAt
                         ? formatDate(target.authorizationExpiresAt)
@@ -190,16 +170,8 @@ export default async function ActiveSecurityPage({
                     <td>
                       {target.authorizationStatus === "verified" ? (
                         <form action={startActiveScan} className="form-row">
-                          <input
-                            type="hidden"
-                            name="projectId"
-                            value={projectId}
-                          />
-                          <input
-                            type="hidden"
-                            name="targetId"
-                            value={target.id}
-                          />
+                          <input type="hidden" name="projectId" value={projectId} />
+                          <input type="hidden" name="targetId" value={target.id} />
                           <select
                             name="profile"
                             className="select"
@@ -214,9 +186,7 @@ export default async function ActiveSecurityPage({
                           </button>
                         </form>
                       ) : (
-                        <span className="subtle">
-                          Verification required
-                        </span>
+                        <span className="subtle">Verification required</span>
                       )}
                     </td>
                   </tr>
@@ -261,8 +231,7 @@ export default async function ActiveSecurityPage({
                         className={
                           scan.status === "completed"
                             ? "state state-unchanged"
-                            : scan.status === "failed" ||
-                                scan.status === "cancelled"
+                            : scan.status === "failed" || scan.status === "cancelled"
                               ? "state state-removed"
                               : "state state-new"
                         }
@@ -273,29 +242,13 @@ export default async function ActiveSecurityPage({
                     <td className="mono">
                       {scan.requestCount}/{scan.requestBudget}
                     </td>
-                    <td>
-                      {scan.score === null
-                        ? "—"
-                        : Math.round(scan.score)}
-                    </td>
+                    <td>{scan.score === null ? "—" : Math.round(scan.score)}</td>
                     <td className="right">
-                      {scan.status === "queued" ||
-                      scan.status === "running" ? (
+                      {scan.status === "queued" || scan.status === "running" ? (
                         <form action={cancelActiveScan}>
-                          <input
-                            type="hidden"
-                            name="projectId"
-                            value={projectId}
-                          />
-                          <input
-                            type="hidden"
-                            name="scanId"
-                            value={scan.id}
-                          />
-                          <button
-                            type="submit"
-                            className="button button-danger"
-                          >
+                          <input type="hidden" name="projectId" value={projectId} />
+                          <input type="hidden" name="scanId" value={scan.id} />
+                          <button type="submit" className="button button-danger">
                             Cancel
                           </button>
                         </form>
@@ -316,9 +269,7 @@ export default async function ActiveSecurityPage({
         </div>
         {findings.length === 0 ? (
           <div className="empty">
-            <p className="subtle">
-              No active findings are persisted for this project.
-            </p>
+            <p className="subtle">No active findings are persisted for this project.</p>
           </div>
         ) : (
           <div className="table-wrap">
@@ -340,22 +291,15 @@ export default async function ActiveSecurityPage({
                       <Severity value={finding.severity} />
                     </td>
                     <td>
-                      <Link
-                        href={`/projects/${projectId}/findings/${finding.id}`}
-                      >
+                      <Link href={`/projects/${projectId}/findings/${finding.id}`}>
                         <strong>{finding.title}</strong>
                       </Link>
-                      <div className="eyebrow">
-                        {finding.ruleId}
-                      </div>
+                      <div className="eyebrow">{finding.ruleId}</div>
                     </td>
                     <td>{finding.confidence}</td>
                     <td>{finding.phase ?? "—"}</td>
                     <td className="mono">{finding.route ?? "—"}</td>
-                    <td>
-                      {finding.validationStatus ??
-                        finding.status}
-                    </td>
+                    <td>{finding.validationStatus ?? finding.status}</td>
                   </tr>
                 ))}
               </tbody>

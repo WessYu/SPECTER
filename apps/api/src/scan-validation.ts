@@ -37,11 +37,37 @@ const CATEGORIES = new Set<FindingCategory>([
 ]);
 const CONFIDENCES = new Set<Confidence>(["low", "medium", "high", "confirmed"]);
 const SOURCES = new Set<FindingSource>(["static", "build", "dependency", "remote", "runtime"]);
-const FINDING_STATUSES = new Set<FindingStatus>(["open", "resolved", "suppressed", "confirmed", "potential", "inconclusive"]);
-const FINDING_SCANNERS = new Set<FindingScanner>(["static", "build", "dependency", "passive", "runtime", "active"]);
-const FINDING_PHASES = new Set<FindingPhase>(["source", "build", "preview", "production", "runtime"]);
+const FINDING_STATUSES = new Set<FindingStatus>([
+  "open",
+  "resolved",
+  "suppressed",
+  "confirmed",
+  "potential",
+  "inconclusive",
+]);
+const FINDING_SCANNERS = new Set<FindingScanner>([
+  "static",
+  "build",
+  "dependency",
+  "passive",
+  "runtime",
+  "active",
+]);
+const FINDING_PHASES = new Set<FindingPhase>([
+  "source",
+  "build",
+  "preview",
+  "production",
+  "runtime",
+]);
 const ACTIVE_PROFILES = new Set<ActiveProfile>(["safe", "standard"]);
-const ACTIVE_AUTH_STATUSES = new Set<ActiveAuthorizationStatus>(["local", "preview", "unverified", "verified", "expired"]);
+const ACTIVE_AUTH_STATUSES = new Set<ActiveAuthorizationStatus>([
+  "local",
+  "preview",
+  "unverified",
+  "verified",
+  "expired",
+]);
 const SCAN_STATUSES = new Set<ScanStatus>([
   "queued",
   "running",
@@ -334,15 +360,9 @@ export function validateScanResult(value: unknown): ScanResult {
   const scanType =
     row.scanType === undefined
       ? undefined
-      : enumValue(
-          row.scanType,
-          new Set(["standard", "active"] as const),
-          "scanType",
-        );
+      : enumValue(row.scanType, new Set(["standard", "active"] as const), "scanType");
   const profile =
-    row.profile === undefined
-      ? undefined
-      : enumValue(row.profile, ACTIVE_PROFILES, "profile");
+    row.profile === undefined ? undefined : enumValue(row.profile, ACTIVE_PROFILES, "profile");
   const authorization =
     row.authorization === undefined
       ? undefined
@@ -362,11 +382,7 @@ export function validateScanResult(value: unknown): ScanResult {
               ? undefined
               : dateTime(value.expiresAt, "authorization.expiresAt");
           return {
-            status: enumValue(
-              value.status,
-              ACTIVE_AUTH_STATUSES,
-              "authorization.status",
-            ),
+            status: enumValue(value.status, ACTIVE_AUTH_STATUSES, "authorization.status"),
             mode,
             hostname: string(value.hostname, "authorization.hostname", 253),
             ...(verifiedAt ? { verifiedAt } : {}),
@@ -387,12 +403,7 @@ export function validateScanResult(value: unknown): ScanResult {
               1,
               100,
             ),
-            concurrency: integer(
-              value.concurrency,
-              "budget.concurrency",
-              1,
-              100,
-            ),
+            concurrency: integer(value.concurrency, "budget.concurrency", 1, 100),
           };
         })();
   return {

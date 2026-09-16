@@ -35,7 +35,12 @@ export function evaluateSecurityGate(
     if (policy.failOn !== "none") {
       const threshold = rank[policy.failOn];
       for (const finding of current.findings) {
-        if (finding.status === "suppressed" || finding.status === "inconclusive" || rank[finding.severity] < threshold) continue;
+        if (
+          finding.status === "suppressed" ||
+          finding.status === "inconclusive" ||
+          rank[finding.severity] < threshold
+        )
+          continue;
         failures.push({
           code: "NEW_FINDING",
           message: `${finding.severity.toUpperCase()} ${finding.ruleId}: ${finding.title}`,
@@ -50,7 +55,11 @@ export function evaluateSecurityGate(
   if (policy.failOn !== "none") {
     const threshold = rank[policy.failOn];
     for (const finding of diff.new) {
-      if (finding.status !== "suppressed" && finding.status !== "inconclusive" && rank[finding.severity] >= threshold)
+      if (
+        finding.status !== "suppressed" &&
+        finding.status !== "inconclusive" &&
+        rank[finding.severity] >= threshold
+      )
         failures.push({
           code: "NEW_FINDING",
           message: `New ${finding.severity.toUpperCase()} finding: ${finding.title}`,

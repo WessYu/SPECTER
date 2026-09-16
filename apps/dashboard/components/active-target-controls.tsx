@@ -17,54 +17,29 @@ export function ActiveTargetControls({
   readonly targetId: string;
   readonly status: string;
 }) {
-  const [generation, generateAction, generating] =
-    useActionState(generateActiveVerification, initial);
-  const [verification, verifyAction, verifying] =
-    useActionState(verifyActiveTarget, initial);
+  const [generation, generateAction, generating] = useActionState(
+    generateActiveVerification,
+    initial,
+  );
+  const [verification, verifyAction, verifying] = useActionState(verifyActiveTarget, initial);
 
   return (
     <div>
       <div className="form-row">
         {status !== "verified" ? (
           <form action={generateAction}>
-            <input
-              type="hidden"
-              name="projectId"
-              value={projectId}
-            />
-            <input
-              type="hidden"
-              name="targetId"
-              value={targetId}
-            />
-            <button
-              className="button button-quiet"
-              type="submit"
-              disabled={generating}
-            >
-              {generating
-                ? "Generating…"
-                : "Generate verification token"}
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="targetId" value={targetId} />
+            <button className="button button-quiet" type="submit" disabled={generating}>
+              {generating ? "Generating…" : "Generate verification token"}
             </button>
           </form>
         ) : null}
         {status !== "verified" ? (
           <form action={verifyAction}>
-            <input
-              type="hidden"
-              name="projectId"
-              value={projectId}
-            />
-            <input
-              type="hidden"
-              name="targetId"
-              value={targetId}
-            />
-            <button
-              className="button"
-              type="submit"
-              disabled={verifying}
-            >
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="targetId" value={targetId} />
+            <button className="button" type="submit" disabled={verifying}>
               {verifying ? "VERIFYING" : "Verify"}
             </button>
           </form>

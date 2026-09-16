@@ -61,8 +61,7 @@ function activeResult() {
         route: "/api",
         method: "GET",
         parameter: "origin",
-        reproduction:
-          "specter pentest https://example.com --rule SPECTER-ACTIVE-CORS-001",
+        reproduction: "specter pentest https://example.com --rule SPECTER-ACTIVE-CORS-001",
         whyItMatters: "Credentialed cross-origin reads.",
         fingerprint: "active-fingerprint",
       },
@@ -95,9 +94,7 @@ describe("active scan ingestion validation", () => {
   it("rejects invalid active profiles and budgets", () => {
     const invalidProfile = activeResult();
     invalidProfile.profile = "aggressive";
-    expect(() => validateScanResult(invalidProfile)).toThrow(
-      "profile is invalid",
-    );
+    expect(() => validateScanResult(invalidProfile)).toThrow("profile is invalid");
 
     const invalidBudget = activeResult();
     invalidBudget.profile = "safe";

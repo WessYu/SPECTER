@@ -1,15 +1,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./config-loader.js";
-import {
-  defaultAuthorizationStore,
-  runActiveScan,
-} from "@specter/scanner-active";
-import type {
-  ActiveProfile,
-  ScanResult,
-  Severity,
-} from "@specter/types";
+import { defaultAuthorizationStore, runActiveScan } from "@specter/scanner-active";
+import type { ActiveProfile, ScanResult, Severity } from "@specter/types";
 import {
   compareScans,
   evaluateSecurityGate,
@@ -38,14 +31,9 @@ interface ParsedScanArgs {
   readonly rules: ReadonlySet<string>;
 }
 
-function needValue(
-  args: readonly string[],
-  index: number,
-  flag: string,
-): string {
+function needValue(args: readonly string[], index: number, flag: string): string {
   const value = args[index + 1];
-  if (!value || value.startsWith("--"))
-    throw new Error(`${flag} requires a value.`);
+  if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value.`);
   return value;
 }
 
@@ -68,14 +56,12 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === "--json") {
-      if (format === "sarif")
-        throw new Error("--json and --sarif are mutually exclusive.");
+      if (format === "sarif") throw new Error("--json and --sarif are mutually exclusive.");
       format = "json";
       continue;
     }
     if (arg === "--sarif") {
-      if (format === "json")
-        throw new Error("--json and --sarif are mutually exclusive.");
+      if (format === "json") throw new Error("--json and --sarif are mutually exclusive.");
       format = "sarif";
       continue;
     }
@@ -124,14 +110,8 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
     }
     if (arg === "--fail-on") {
       const value = needValue(args, index, arg);
-      if (
-        !["critical", "high", "medium", "low", "none"].includes(
-          value,
-        )
-      )
-        throw new Error(
-          "--fail-on must be critical, high, medium, low or none.",
-        );
+      if (!["critical", "high", "medium", "low", "none"].includes(value))
+        throw new Error("--fail-on must be critical, high, medium, low or none.");
       failOn = value as Severity | "none";
       index += 1;
       continue;
@@ -139,9 +119,7 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
     if (arg === "--max-score-drop") {
       const value = Number(needValue(args, index, arg));
       if (!Number.isFinite(value) || value < 0 || value > 100)
-        throw new Error(
-          "--max-score-drop must be between 0 and 100.",
-        );
+        throw new Error("--max-score-drop must be between 0 and 100.");
       maxScoreDrop = value;
       index += 1;
       continue;
@@ -156,10 +134,8 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
       index += 1;
       continue;
     }
-    if (arg?.startsWith("-"))
-      throw new Error(`Unknown scan option: ${arg}`);
-    if (target)
-      throw new Error("Only one scan target may be supplied.");
+    if (arg?.startsWith("-")) throw new Error(`Unknown scan option: ${arg}`);
+    if (target) throw new Error("Only one scan target may be supplied.");
     target = arg;
   }
 
@@ -181,12 +157,8 @@ function parseScanArgs(args: readonly string[]): ParsedScanArgs {
   };
 }
 
-function validateLoadedScan(
-  value: unknown,
-  source: string,
-): ScanResult {
-  if (!value || typeof value !== "object")
-    throw new Error(`Invalid scan report: ${source}`);
+function validateLoadedScan(value: unknown, source: string): ScanResult {
+  if (!value || typeof value !== "object") throw new Error(`Invalid scan report: ${source}`);
   const candidate = value as Partial<ScanResult>;
   if (
     candidate.schemaVersion !== "1" ||
@@ -195,19 +167,12 @@ function validateLoadedScan(
     !candidate.score ||
     !Array.isArray(candidate.findings)
   )
-    throw new Error(
-      `Unsupported or invalid SPECTER scan report: ${source}`,
-    );
+    throw new Error(`Unsupported or invalid SPECTER scan report: ${source}`);
   return candidate as ScanResult;
 }
 
-export async function readScanReport(
-  file: string,
-): Promise<ScanResult> {
-  return validateLoadedScan(
-    JSON.parse(await readFile(path.resolve(file), "utf8")),
-    file,
-  );
+export async function readScanReport(file: string): Promise<ScanResult> {
+  return validateLoadedScan(JSON.parse(await readFile(path.resolve(file), "utf8")), file);
 }
 
 async function persistReport(
@@ -218,8 +183,7 @@ async function persistReport(
 ): Promise<string> {
   const extension = format === "sarif" ? ".sarif" : ".json";
   let file: string;
-  if (!requested)
-    file = path.join(cwd, ".specter", `report${extension}`);
+  if (!requested) file = path.join(cwd, ".specter", `report${extension}`);
   else {
     const absolute = path.resolve(cwd, requested);
     file = /\.(?:json|sarif)$/i.test(absolute)
@@ -227,19 +191,12 @@ async function persistReport(
       : path.join(absolute, `specter${extension}`);
   }
   await mkdir(path.dirname(file), { recursive: true });
-  const machineFormat =
-    format === "sarif" ? "sarif" : "json";
-  await writeFile(
-    file,
-    renderReport(scan, machineFormat),
-    "utf8",
-  );
+  const machineFormat = format === "sarif" ? "sarif" : "json";
+  await writeFile(file, renderReport(scan, machineFormat), "utf8");
   return file;
 }
 
-function suppressions(
-  config: Awaited<ReturnType<typeof loadConfig>>["config"],
-) {
+function suppressions(config: Awaited<ReturnType<typeof loadConfig>>["config"]) {
   return [
     ...config.ignore.map((ruleId) => ({
       ruleId,
@@ -262,39 +219,27 @@ async function addActiveValidation(
   try {
     const activeTarget = /^https?:\/\//i.test(target)
       ? target
-      : (
-          (preview = await startLocalPreview(
-            path.resolve(cwd, target),
-            signal,
-          ))
-        ).url;
+      : (preview = await startLocalPreview(path.resolve(cwd, target), signal)).url;
 
     const active = await runActiveScan(activeTarget, {
       config: {
         ...config.active,
         enabled: true,
-        profile:
-          parsed.activeProfile ?? config.active.profile,
+        profile: parsed.activeProfile ?? config.active.profile,
       },
       storePath: defaultAuthorizationStore(cwd),
-      ...(base.surface?.routes
-        ? { observedRoutes: base.surface.routes }
-        : {}),
+      ...(base.surface?.routes ? { observedRoutes: base.surface.routes } : {}),
       ...(baseline ? { baseline } : {}),
       signal,
-      ...(parsed.rules.size > 0
-        ? { rules: parsed.rules }
-        : {}),
+      ...(parsed.rules.size > 0 ? { rules: parsed.rules } : {}),
       ...(process.env.SPECTER_TEST_USERNAME
         ? {
-            testUsername:
-              process.env.SPECTER_TEST_USERNAME,
+            testUsername: process.env.SPECTER_TEST_USERNAME,
           }
         : {}),
       ...(process.env.SPECTER_TEST_PASSWORD
         ? {
-            testPassword:
-              process.env.SPECTER_TEST_PASSWORD,
+            testPassword: process.env.SPECTER_TEST_PASSWORD,
           }
         : {}),
       suppressions: suppressions(config),
@@ -323,9 +268,7 @@ export async function runScanCommand(
   let baseline: ScanResult | undefined;
   try {
     if (parsed.baselinePath)
-      baseline = await readScanReport(
-        path.resolve(cwd, parsed.baselinePath),
-      );
+      baseline = await readScanReport(path.resolve(cwd, parsed.baselinePath));
   } catch (error: unknown) {
     return {
       exitCode: 2,
@@ -349,20 +292,14 @@ export async function runScanCommand(
     scan = /^https?:\/\//i.test(target)
       ? await executeRemoteScan(target, {
           ...(baseline ? { baseline } : {}),
-          ...(parsed.runtime !== undefined
-            ? { runtime: parsed.runtime }
-            : {}),
+          ...(parsed.runtime !== undefined ? { runtime: parsed.runtime } : {}),
           config: loadedConfig.config,
         })
       : await executeLocalScan(path.resolve(cwd, target), {
           ...(baseline ? { baseline } : {}),
           offline: parsed.offline,
-          ...(parsed.build !== undefined
-            ? { build: parsed.build }
-            : {}),
-          ...(parsed.dependencies !== undefined
-            ? { dependencies: parsed.dependencies }
-            : {}),
+          ...(parsed.build !== undefined ? { build: parsed.build } : {}),
+          ...(parsed.dependencies !== undefined ? { dependencies: parsed.dependencies } : {}),
           config: loadedConfig.config,
         });
 
@@ -390,12 +327,7 @@ export async function runScanCommand(
 
   let saved: string | undefined;
   try {
-    saved = await persistReport(
-      scan,
-      parsed.output,
-      parsed.format,
-      cwd,
-    );
+    saved = await persistReport(scan, parsed.output, parsed.format, cwd);
   } catch (error: unknown) {
     return {
       exitCode: 3,
@@ -405,17 +337,12 @@ export async function runScanCommand(
 
   const rendered = renderReport(scan, parsed.format);
   const withLocation =
-    parsed.format === "terminal"
-      ? `${rendered}\nReport saved:\n${saved}\n`
-      : rendered;
+    parsed.format === "terminal" ? `${rendered}\nReport saved:\n${saved}\n` : rendered;
 
   if (parsed.ci) {
     const gate = evaluateSecurityGate(scan, baseline, {
-      failOn:
-        parsed.failOn ?? loadedConfig.config.failOn,
-      maxScoreDrop:
-        parsed.maxScoreDrop ??
-        loadedConfig.config.maxScoreDrop,
+      failOn: parsed.failOn ?? loadedConfig.config.failOn,
+      maxScoreDrop: parsed.maxScoreDrop ?? loadedConfig.config.maxScoreDrop,
     });
     if (!gate.passed)
       return {
@@ -429,15 +356,12 @@ export async function runScanCommand(
   return { exitCode: 0, stdout: withLocation };
 }
 
-export async function runCompareCommand(
-  args: readonly string[],
-): Promise<CommandResult> {
+export async function runCompareCommand(args: readonly string[]): Promise<CommandResult> {
   const [previousPath, currentPath] = args;
   if (!previousPath || !currentPath || args.length !== 2)
     return {
       exitCode: 2,
-      stderr:
-        "Usage: specter compare <previous.json> <current.json>\n",
+      stderr: "Usage: specter compare <previous.json> <current.json>\n",
     };
   try {
     const [previous, current] = await Promise.all([
@@ -452,21 +376,14 @@ export async function runCompareCommand(
       `${diff.score.previous} → ${diff.score.current} (${diff.score.delta >= 0 ? "+" : ""}${diff.score.delta})`,
       "",
       "New findings",
-      ...diff.new.map(
-        (finding) =>
-          `+ ${finding.severity.toUpperCase()} ${finding.title}`,
-      ),
+      ...diff.new.map((finding) => `+ ${finding.severity.toUpperCase()} ${finding.title}`),
       "",
       "Resolved",
-      ...diff.resolved.map(
-        (finding) =>
-          `- ${finding.severity.toUpperCase()} ${finding.title}`,
-      ),
+      ...diff.resolved.map((finding) => `- ${finding.severity.toUpperCase()} ${finding.title}`),
       "",
       "Severity changed",
       ...diff.severityChanged.map(
-        (change) =>
-          `~ ${change.previous} → ${change.current} ${change.finding.title}`,
+        (change) => `~ ${change.previous} → ${change.current} ${change.finding.title}`,
       ),
       "",
     ];
@@ -475,8 +392,7 @@ export async function runCompareCommand(
       diff.new.some(
         (finding) =>
           finding.status !== "inconclusive" &&
-          (finding.severity === "high" ||
-            finding.severity === "critical"),
+          (finding.severity === "high" || finding.severity === "critical"),
       );
     return {
       exitCode: regression ? 1 : 0,
