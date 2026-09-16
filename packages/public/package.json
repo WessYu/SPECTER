@@ -1,6 +1,6 @@
 {
   "name": "@wess2001/specter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Defensive application security from source to production.",
   "type": "module",
   "bin": {
