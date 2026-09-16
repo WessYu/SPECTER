@@ -129,7 +129,10 @@ export async function safeRequest(
 
   for (let redirect = 0; redirect <= maxRedirects; redirect += 1) {
     if (Date.now() > deadline) throw new Error("Total scan request deadline exceeded.");
-    const target = await resolvePublicTarget(current, { allowLocalhost: options.allowLocalhost });
+    const target = await resolvePublicTarget(
+      current,
+      options.allowLocalhost === undefined ? {} : { allowLocalhost: options.allowLocalhost },
+    );
     const { response, location } = await once(target, options);
     if ([301, 302, 303, 307, 308].includes(response.status) && location) {
       if (options.followRedirects === false) return { ...response, redirects };
