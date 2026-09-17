@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./assets/icon.svg" alt="SPECTER" width="96" />
+
 # SPECTER
 
 ### Application security from source to production.
