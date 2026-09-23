@@ -36,56 +36,20 @@ SOURCE  ──▶  BUILD  ──▶  PREVIEW  ──▶  PRODUCTION  ──▶  
                                                CSP/CORS
 ```
 
-## The demo
+## Real CLI demo
 
-The repository ships with deliberately vulnerable and safe fixtures so the difference is visible
-without inventing sample output.
+<p align="center">
+  <a href="https://github.com/WessYu/SPECTER/actions/runs/35853169108">
+    <img src="https://raw.githubusercontent.com/WessYu/WESSYU-ARQUIVO/main/public/projects/specter/proof.gif" alt="Real SPECTER CLI execution scanning vulnerable and secure fixtures" width="100%" />
+  </a>
+</p>
 
-### Vulnerable fixture
+This is an **actual terminal recording** captured from CI while SPECTER runs deterministic offline scans against the repository's vulnerable and secure fixtures.
 
-```bash
-pnpm specter scan examples/vulnerable-next --ci --fail-on high
-```
+The vulnerable fixture is blocked by policy; the secure fixture completes with a clean security gate. The recording, transcript and source fixtures come from the same workflow execution.
 
-Observed result with the current fixture:
+[View the exact CI run that produced this recording →](https://github.com/WessYu/SPECTER/actions/runs/35853169108)
 
-```text
-Security Score
-0/100
-
-HIGH         3
-
-Security gate failed:
-- SPECTER-SOURCE-001  Dynamic code execution with eval
-- SPECTER-SOURCE-007  Private variable exposed to client-facing code
-- SPECTER-SECRET-001  Potential exposed secret
-
-❌ CI BLOCKED
-```
-
-### Safe fixture
-
-```bash
-pnpm specter scan examples/secure-next --ci --fail-on medium
-```
-
-```text
-Security Score
-100/100
-
-CRITICAL     0
-HIGH         0
-MEDIUM       0
-LOW          0
-INFO         0
-
-0 findings require review.
-
-✅ CI PASSED
-```
-
-Dependency advisory counts come from the configured provider and can change as upstream databases
-are updated. The repository smoke suite uses deterministic fixtures for repeatable validation.
 
 ## Quick start
 
